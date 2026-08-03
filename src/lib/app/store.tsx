@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { initialState, type AppState, type Milestone, type PlanEvent } from "./types";
+import { initialState, type AppState, type Milestone, type Place, type PlanEvent } from "./types";
 import { syncReminders } from "./reminders";
 
 const KEY = "together-now:v1";
@@ -20,6 +20,8 @@ type Ctx = {
   removeEvent: (id: string) => void;
   upsertMilestone: (m: Omit<Milestone, "updatedAt"> & { updatedAt?: number }) => void;
   removeMilestone: (id: string) => void;
+  upsertPlace: (p: Omit<Place, "updatedAt"> & { updatedAt?: number }) => void;
+  removePlace: (id: string) => void;
   reset: () => void;
 };
 
@@ -100,6 +102,19 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           ...prev,
           milestones: prev.milestones.filter((m) => m.id !== id),
         })),
+      upsertPlace: (p) =>
+        setState((prev) => {
+          const item: Place = { ...p, updatedAt: Date.now() } as Place;
+          const exists = prev.places.some((x) => x.id === item.id);
+          return {
+            ...prev,
+            places: exists
+              ? prev.places.map((x) => (x.id === item.id ? { ...x, ...item } : x))
+              : [...prev.places, item],
+          };
+        }),
+      removePlace: (id) =>
+        setState((prev) => ({ ...prev, places: prev.places.filter((p) => p.id !== id) })),
       reset: () => setState(() => initialState()),
     }),
     [state, hydrated, setState],
