@@ -232,6 +232,27 @@ function PlacesPage() {
         </div>
       }
     >
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search ideas, addresses, notes…"
+          aria-label="Search date ideas"
+          className="rounded-2xl pl-9 pr-9"
+        />
+        {query ? (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            aria-label="Clear search"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        ) : null}
+      </div>
+
       <div className="flex gap-2">
         {FILTERS.map((f) => (
           <button
