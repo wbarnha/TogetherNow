@@ -116,6 +116,33 @@ function MessagesPage() {
         </section>
       ) : null}
 
+      <section className="space-y-2 pt-2">
+        <h2 className="px-1 text-sm font-medium text-muted-foreground">Think it through with AI</h2>
+        <div className="grid grid-cols-2 gap-3">
+          {ASSISTANTS.map((assistant) => (
+            <button
+              key={assistant.id}
+              type="button"
+              onClick={async () => {
+                const prompt = `My partner ${state.them.name || ""} and I are long distance — they're in ${state.them.timeZone} and I'm in ${state.me.timeZone}. Help me think through`;
+                await launchAssistant(assistant, prompt);
+                toast.success(`${assistant.name} opened`);
+              }}
+              className="flex flex-col items-start rounded-3xl border border-border bg-card p-4 text-left transition-shadow hover:shadow-md"
+            >
+              <span
+                className="mb-6 inline-flex size-10 items-center justify-center rounded-2xl text-sm font-semibold text-white"
+                style={{ backgroundColor: assistant.accent }}
+              >
+                {assistant.name.slice(0, 1)}
+              </span>
+              <span className="block font-medium">{assistant.name}</span>
+              <span className="block text-xs text-muted-foreground">{assistant.note}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
       <p className="px-1 pb-2 text-xs leading-relaxed text-muted-foreground">
         These are shortcuts, not inboxes. Apple, Meta, and Discord don&apos;t let other
         apps read your message history, so nothing you say is stored here.
