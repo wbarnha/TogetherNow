@@ -11,9 +11,10 @@ import {
   startOfWeek,
   endOfWeek,
 } from "date-fns";
-import { CalendarPlus, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { CalendarPlus, ChevronLeft, ChevronRight, Plus, Share2 } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { EventDialog } from "@/components/app/EventDialog";
+import { ExportIcsDialog } from "@/components/app/ExportIcsDialog";
 import { ImportIcsDialog } from "@/components/app/ImportIcsDialog";
 import { OwnerBadge } from "@/components/app/OwnerBadge";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ function CalendarPage() {
   const [selected, setSelected] = useState(() => toISODate(new Date()));
   const [open, setOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [editing, setEditing] = useState<PlanEvent | null>(null);
 
   const days = useMemo(
@@ -77,6 +79,15 @@ function CalendarPage() {
       subtitle={`${zoneLabel(state.me.timeZone)} · ${zoneLabel(state.them.timeZone)}`}
       action={
         <div className="flex items-center gap-2">
+          <Button
+            size="icon"
+            variant="outline"
+            className="rounded-2xl"
+            aria-label="Export calendar file"
+            onClick={() => setExportOpen(true)}
+          >
+            <Share2 className="size-5" />
+          </Button>
           <Button
             size="icon"
             variant="outline"
@@ -200,6 +211,7 @@ function CalendarPage() {
         defaultDate={selected}
       />
       <ImportIcsDialog open={importOpen} onOpenChange={setImportOpen} />
+      <ExportIcsDialog open={exportOpen} onOpenChange={setExportOpen} />
     </AppShell>
   );
 }
