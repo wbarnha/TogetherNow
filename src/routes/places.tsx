@@ -11,7 +11,9 @@ import {
   Map as MapIcon,
   MapPin,
   Search,
+  Send,
   Share2,
+  Sparkles,
   Trash2,
   Upload,
   X,
@@ -41,6 +43,8 @@ import {
   PLACE_CATEGORIES,
 } from "@/lib/app/places";
 import type { GeoResult } from "@/lib/app/geocode";
+import { sendIdea } from "@/lib/app/idea-share";
+import { notifyNow } from "@/lib/app/reminders";
 import { newId, useStore } from "@/lib/app/store";
 import { toISODate } from "@/lib/app/time";
 import type { Place, PlaceCategory, PlanEvent } from "@/lib/app/types";
@@ -72,6 +76,7 @@ export const Route = createFileRoute("/places")({
 const FILTERS = [
   { value: "all", label: "All" },
   { value: "want", label: "Want to go" },
+  { value: "together", label: "Together" },
   { value: "been", label: "Been" },
 ] as const;
 
@@ -176,11 +181,55 @@ function PlacesPage() {
     });
   };
 
+  /**
+   * One tap: add the idea to the shared "Together" list, ping this device with
+   * a confirmation notification, and open the share sheet so the message lands
+   * in whichever app your partner actually reads.
+   */
+  const sendToPartner = async (place: Place) => {
+    const themName = state.them.name || "your partner";
+    const wasShortlisted = Boolean(place.shortlisted);
+    if (!wasShortlisted) {
+      upsertPlace({ ...place, shortlisted: true, owner: "us", updatedAt: Date.now() });
+    }
+
+    const result = await sendIdea(place, state.me.name);
+    void notifyNow("Idea sent 💛", `${place.name} is on your Together list with ${themName}.`);
+
+    if (result === "failed") {
+      toast.error("Couldn't open the share sheet", {
+        description: `${place.name} is still saved to your Together list.`,
+      });
+      return;
+    }
+
+    toast.success(
+      result === "shared" ? `Sent ${place.name} to ${themName}` : `Copied ${place.name} to share`,
+      {
+        description: "Added to your Together plan list.",
+        cancel: wasShortlisted
+          ? undefined
+          : {
+              label: "Undo",
+              onClick: () => upsertPlace(place),
+            },
+      },
+    );
+  };
+
   const places = useMemo(() => {
     const q = query.trim().toLowerCase();
     const max = radius === "any" ? null : Number(radius);
     const rows = state.places
-      .filter((p) => (filter === "all" ? true : filter === "been" ? p.visited : !p.visited))
+      .filter((p) =>
+        filter === "all"
+          ? true
+          : filter === "been"
+            ? p.visited
+            : filter === "together"
+              ? Boolean(p.shortlisted)
+              : !p.visited,
+      )
       .filter((p) => (category === "all" ? true : placeCategory(p) === category))
       .filter((p) =>
         q ? [p.name, p.address, p.note].some((f) => f?.toLowerCase().includes(q)) : true,
@@ -458,6 +507,11 @@ function PlacesPage() {
                     {categoryLabel(placeCategory(place))}
                     {distance != null ? ` · ${formatDistance(distance)} away` : ""}
                   </p>
+                  {place.shortlisted ? (
+                    <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                      <Sparkles className="size-3" /> On your Together list
+                    </p>
+                  ) : null}
                   {place.address ? (
                     <p className="truncate text-sm text-muted-foreground">{place.address}</p>
                   ) : null}
@@ -469,7 +523,16 @@ function PlacesPage() {
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Button size="sm" className="rounded-2xl" onClick={() => planTogether(place)}>
+                <Button size="sm" className="rounded-2xl" onClick={() => void sendToPartner(place)}>
+                  <Send className="mr-1.5 size-4" />
+                  Send to {state.them.name || "partner"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-2xl"
+                  onClick={() => planTogether(place)}
+                >
                   <CalendarHeart className="mr-1.5 size-4" />
                   Plan for us
                 </Button>

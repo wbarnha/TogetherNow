@@ -46,6 +46,8 @@ export type Place = {
   category?: PlaceCategory | undefined;
   /** already been there together */
   visited: boolean;
+  /** sent to your partner — lives on the shared "Together" plan list */
+  shortlisted?: boolean | undefined;
   updatedAt: number;
 };
 

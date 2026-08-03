@@ -1,14 +1,41 @@
 import type { AppState } from "./types";
 import { nextOccurrence, toISODate, wallTimeToInstant } from "./time";
 
+/** True only inside the native Capacitor shell. */
+function isNative() {
+  if (typeof window === "undefined") return false;
+  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+  return Boolean(cap?.isNativePlatform?.());
+}
+
+/**
+ * Fires an immediate local notification (native only, silently skipped in a
+ * browser). Used for confirmations like "idea sent to your partner".
+ */
+export async function notifyNow(title: string, body: string) {
+  if (!isNative()) return false;
+  const { LocalNotifications } = await import("@capacitor/local-notifications");
+  const perm = await LocalNotifications.requestPermissions();
+  if (perm.display !== "granted") return false;
+  await LocalNotifications.schedule({
+    notifications: [
+      {
+        id: Math.floor(Date.now() % 2_000_000_000),
+        title,
+        body,
+        schedule: { at: new Date(Date.now() + 1000) },
+      },
+    ],
+  });
+  return true;
+}
+
 /**
  * Schedules local device notifications for upcoming milestones and plans.
  * Runs only inside the native (Capacitor) app; a no-op in the browser.
  */
 export async function syncReminders(state: AppState) {
-  if (typeof window === "undefined") return;
-  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
-  if (!cap?.isNativePlatform?.()) return;
+  if (!isNative()) return;
 
   const { LocalNotifications } = await import("@capacitor/local-notifications");
   const perm = await LocalNotifications.requestPermissions();
