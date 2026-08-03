@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Check, HandCoins, Minus, Pencil, PiggyBank, Plus, Undo2 } from "lucide-react";
+import { Check, HandCoins, Minus, Pencil, PiggyBank, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/AppShell";
 import { ExpenseDialog } from "@/components/app/ExpenseDialog";

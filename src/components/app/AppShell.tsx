@@ -1,5 +1,14 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { CalendarDays, Heart, MapPin, MessageCircle, Plane, Settings, Sparkles } from "lucide-react";
+import {
+  CalendarDays,
+  Heart,
+  MapPin,
+  MessageCircle,
+  Plane,
+  Settings,
+  Sparkles,
+  Wallet,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +18,7 @@ const TABS = [
   { to: "/milestones", label: "Dates", icon: Sparkles },
   { to: "/places", label: "Ideas", icon: MapPin },
   { to: "/travel", label: "Travel", icon: Plane },
+  { to: "/money", label: "Money", icon: Wallet },
   { to: "/messages", label: "Reach", icon: MessageCircle },
   { to: "/settings", label: "You", icon: Settings },
 ] as const;
