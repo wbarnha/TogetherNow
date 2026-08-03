@@ -52,6 +52,50 @@ export type MessengerId =
   | "whatsapp"
   | "telegram";
 
+export type TravelMode = "flight" | "train" | "bus" | "drive" | "ferry";
+
+/** One researched way of making a trip happen. */
+export type TravelOption = {
+  id: string;
+  mode: TravelMode;
+  /** airline, rail operator, coach line… */
+  carrier?: string | undefined;
+  /** total price per person, in the trip's currency */
+  cost?: number | undefined;
+  /** door-to-door duration in minutes */
+  durationMinutes?: number | undefined;
+  /** free text like "1 stop in Reykjavik" */
+  detail?: string | undefined;
+  url?: string | undefined;
+  /** the option you're going with */
+  chosen: boolean;
+  updatedAt: number;
+};
+
+export type TripStatus = "idea" | "researching" | "booked";
+
+export type Trip = {
+  id: string;
+  title: string;
+  /** who is doing the travelling */
+  traveller: Owner;
+  origin: string;
+  destination: string;
+  /** yyyy-MM-dd */
+  startDate?: string | undefined;
+  endDate?: string | undefined;
+  status: TripStatus;
+  currency: string;
+  /** what the whole visit should cost */
+  budget?: number | undefined;
+  /** money set aside so far */
+  savedByMe: number;
+  savedByThem: number;
+  notes?: string | undefined;
+  options: TravelOption[];
+  updatedAt: number;
+};
+
 export type Profile = {
   name: string;
   timeZone: string;
@@ -69,6 +113,7 @@ export type AppState = {
   events: PlanEvent[];
   milestones: Milestone[];
   places: Place[];
+  trips: Trip[];
   reminderLeadDays: number;
   theme: "light" | "dark";
 };
@@ -91,6 +136,7 @@ export const initialState = (): AppState => ({
   events: [],
   milestones: [],
   places: [],
+  trips: [],
   reminderLeadDays: 3,
   theme: "light",
 });
