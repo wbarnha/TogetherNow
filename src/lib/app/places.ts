@@ -116,16 +116,17 @@ export function parsePlacesCsv(text: string): ParsedPlace[] {
 
 /** Takeout "Saved Places.json" and generic GeoJSON point collections. */
 export function parsePlacesGeoJson(text: string): ParsedPlace[] {
-  let data: any;
+  let data: unknown;
   try {
     data = JSON.parse(text);
   } catch {
     return [];
   }
-  const features: any[] = Array.isArray(data?.features)
-    ? data.features
+  const root = data as { features?: unknown } | null;
+  const features: Record<string, any>[] = Array.isArray(root?.features)
+    ? (root.features as Record<string, any>[])
     : Array.isArray(data)
-      ? data
+      ? (data as Record<string, any>[])
       : [];
   const out: ParsedPlace[] = [];
   for (const f of features) {
