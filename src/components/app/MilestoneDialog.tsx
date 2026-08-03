@@ -142,6 +142,38 @@ export function MilestoneDialog({
             <Switch checked={recurring} onCheckedChange={setRecurring} />
           </div>
 
+          <div className="space-y-3 rounded-2xl border border-border bg-card px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Remind me</p>
+                <p className="text-xs text-muted-foreground">
+                  Notifications land at {String(state.reminderHour ?? 9).padStart(2, "0")}:00 your
+                  time
+                </p>
+              </div>
+              <Switch checked={remindersOn} onCheckedChange={setRemindersOn} />
+            </div>
+            {remindersOn ? (
+              <div className="flex flex-wrap gap-2">
+                {LEAD_CHOICES.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => toggleLead(n)}
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-xs transition-colors",
+                      leads.includes(n)
+                        ? "border-primary/40 bg-primary/10 text-primary"
+                        : "border-border bg-background text-muted-foreground",
+                    )}
+                  >
+                    {leadLabel(n)}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
           <div className="space-y-2">
             <Label>Whose is it?</Label>
             <div className="grid grid-cols-3 gap-2">
