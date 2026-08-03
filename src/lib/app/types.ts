@@ -161,6 +161,15 @@ export type Profile = {
   handles: Partial<Record<MessengerId, string>>;
 };
 
+/** What gets packed into the share code handed to your partner. */
+export type SharingPrefs = {
+  plans: boolean;
+  dates: boolean;
+  ideas: boolean;
+  moods: boolean;
+  money: boolean;
+};
+
 export type AppState = {
   version: 1;
   onboarded: boolean;
@@ -183,6 +192,7 @@ export type AppState = {
   goals: SavingsGoal[];
   reminderLeadDays: number;
   theme: "light" | "dark";
+  sharing: SharingPrefs;
 };
 
 export const emptyProfile = (name = ""): Profile => ({
@@ -210,4 +220,5 @@ export const initialState = (): AppState => ({
   goals: [],
   reminderLeadDays: 3,
   theme: "light",
+  sharing: { plans: true, dates: true, ideas: true, moods: true, money: true },
 });

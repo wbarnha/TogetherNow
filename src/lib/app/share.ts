@@ -27,19 +27,20 @@ export type SharePayload = {
 const PREFIX = "TN1:";
 
 export function buildShareCode(state: AppState): string {
+  const share = state.sharing ?? { plans: true, dates: true, ideas: true, moods: true, money: true };
   const payload: SharePayload = {
     v: 1,
     from: state.me.name || "Partner",
     fromZone: state.me.timeZone,
     startDate: state.startDate,
     // things I own or that are shared become "theirs"/"ours" on their device
-    events: state.events.filter((e) => e.owner !== "them"),
-    milestones: state.milestones.filter((m) => m.owner !== "them"),
+    events: share.plans ? state.events.filter((e) => e.owner !== "them") : [],
+    milestones: share.dates ? state.milestones.filter((m) => m.owner !== "them") : [],
     // my recent mood check-ins so they land as "them" on the other device
-    moods: state.moods.filter((m) => m.owner === "me").slice(-30),
-    places: state.places.filter((p) => p.shortlisted && p.owner !== "them"),
-    expenses: state.expenses,
-    goals: state.goals,
+    moods: share.moods ? state.moods.filter((m) => m.owner === "me").slice(-30) : [],
+    places: share.ideas ? state.places.filter((p) => p.shortlisted && p.owner !== "them") : [],
+    expenses: share.money ? state.expenses : [],
+    goals: share.money ? state.goals : [],
     at: Date.now(),
   };
   return PREFIX + LZString.compressToEncodedURIComponent(JSON.stringify(payload));
