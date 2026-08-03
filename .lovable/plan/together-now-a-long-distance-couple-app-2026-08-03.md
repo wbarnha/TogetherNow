@@ -1,37 +1,43 @@
-# Tether — a long-distance couple app
+# Together Now: A long-distance couple app
 
 A mobile-first app for two partners to keep a shared calendar, remember the dates that matter, and jump into their conversations fast. No backend: everything lives on the device, and partners exchange data with share codes.
 
 ## What gets built
 
 **Onboarding / pairing**
+
 - Set your name, your partner's name, your two time zones, and a relationship start date.
 - Pairing screen generates a share code (a compact encoded snapshot of your data) as a QR code plus copyable text. Your partner scans or pastes it to merge your events and dates into their app. Works in both directions.
 - Everything is stored in the browser/app's local storage on each device.
 
 **Home**
+
 - Dual clocks showing both partners' local times, with a "good time to call" indicator.
 - Countdown to the next big date and the next shared plan.
 - Days-together counter.
 - Quick actions row.
 
 **Shared calendar**
+
 - Month view plus an upcoming list.
 - Add plans with title, date, time, notes, and a "whose time zone" toggle so both times display side by side.
 - Events are tagged as mine, theirs, or ours.
 - Import/export via the same share code so calendars stay in sync after each exchange.
 
 **Milestones**
+
 - Birthdays, anniversaries, first-met dates, custom recurring milestones.
 - Automatic yearly recurrence, days-until countdowns, and a sorted timeline.
 - Local device reminders ahead of each date.
 
 **Message hub**
+
 - Tiles for iMessage, Discord, Instagram, WhatsApp, Telegram, and FaceTime that deep-link straight into the conversation with your partner.
 - You store the handle/username per app once; the tile opens that app directly.
 - No message content is read or stored — the platforms don't permit it.
 
 **Settings**
+
 - Edit profiles, time zones, handles, reminder lead time, theme.
 - Export a full backup code, import one, reset data.
 

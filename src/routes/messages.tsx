@@ -1,0 +1,123 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { AppShell } from "@/components/app/AppShell";
+import { useStore } from "@/lib/app/store";
+import { MESSENGERS } from "@/lib/app/messengers";
+import { clockIn } from "@/lib/app/time";
+import { useNow } from "@/lib/app/store";
+import { Settings2 } from "lucide-react";
+
+export const Route = createFileRoute("/messages")({
+  head: () => ({
+    meta: [
+      { title: "Reach them — Together Now" },
+      {
+        name: "description",
+        content:
+          "One tap to your conversation in iMessage, WhatsApp, Discord, Telegram, or Instagram.",
+      },
+      { property: "og:title", content: "Reach them — Together Now" },
+      {
+        property: "og:description",
+        content: "All the ways you talk, gathered in one place.",
+      },
+    ],
+  }),
+  component: MessagesPage,
+});
+
+function MessagesPage() {
+  const { state } = useStore();
+  const now = useNow(30000);
+  const configured = MESSENGERS.filter((m) => (state.them.handles[m.id] ?? "").trim());
+  const missing = MESSENGERS.filter((m) => !(state.them.handles[m.id] ?? "").trim());
+
+  return (
+    <AppShell
+      title="Reach them"
+      subtitle={
+        now
+          ? `It's ${clockIn(state.them.timeZone, now)} where ${state.them.name || "they"} are`
+          : "One tap to any conversation"
+      }
+    >
+      {configured.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-border bg-card/50 p-6 text-sm text-muted-foreground">
+          Add {state.them.name || "their"} handles in{" "}
+          <Link to="/settings" className="font-medium text-primary underline">
+            You two
+          </Link>{" "}
+          and they&apos;ll show up here as one-tap shortcuts.
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {configured.map((m) => {
+            const handle = (state.them.handles[m.id] ?? "").trim();
+            return (
+              <a
+                key={m.id}
+                href={m.link(handle)}
+                className="group flex flex-col justify-between rounded-3xl border border-border bg-card p-4 transition-shadow hover:shadow-md"
+              >
+                <span
+                  className="mb-6 inline-flex size-10 items-center justify-center rounded-2xl text-sm font-semibold text-white"
+                  style={{ backgroundColor: m.accent }}
+                >
+                  {m.name.slice(0, 1)}
+                </span>
+                <span className="block font-medium">{m.name}</span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {handle}
+                </span>
+                {m.webFallback ? (
+                  <span className="mt-2 block text-[11px] text-muted-foreground">
+                    App not installed?{" "}
+                    <span
+                      role="link"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.open(m.webFallback!(handle), "_blank", "noopener");
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter")
+                          window.open(m.webFallback!(handle), "_blank", "noopener");
+                      }}
+                      className="cursor-pointer underline"
+                    >
+                      open on web
+                    </span>
+                  </span>
+                ) : null}
+              </a>
+            );
+          })}
+        </div>
+      )}
+
+      {missing.length > 0 ? (
+        <section className="space-y-2 pt-2">
+          <h2 className="px-1 text-sm font-medium text-muted-foreground">
+            Not set up yet
+          </h2>
+          <div className="rounded-3xl border border-border bg-card p-4">
+            <p className="text-sm text-muted-foreground">
+              {missing.map((m) => m.name).join(", ")}
+            </p>
+            <Link
+              to="/settings"
+              className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-primary"
+            >
+              <Settings2 className="size-4" /> Add handles
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
+      <p className="px-1 pb-2 text-xs leading-relaxed text-muted-foreground">
+        These are shortcuts, not inboxes. Apple, Meta, and Discord don&apos;t let other
+        apps read your message history, so nothing you say is stored here.
+      </p>
+    </AppShell>
+  );
+}
