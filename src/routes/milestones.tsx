@@ -40,9 +40,7 @@ export function milestoneNext(m: Milestone) {
   const next = m.recurring ? nextOccurrence(m.date) : new Date(`${m.date}T00:00:00`);
   const iso = toISODate(next);
   const days = daysUntil(iso);
-  const years = m.recurring
-    ? next.getFullYear() - Number(m.date.split("-")[0])
-    : null;
+  const years = m.recurring ? next.getFullYear() - Number(m.date.split("-")[0]) : null;
   return { next, iso, days, years };
 }
 
@@ -157,9 +155,7 @@ function MilestonesPage() {
               className="flex w-full items-center justify-between rounded-3xl border border-border bg-card/60 p-4 text-left"
             >
               <span className="truncate text-sm">{m.title}</span>
-              <span className="text-xs text-muted-foreground">
-                {format(next, "d MMM yyyy")}
-              </span>
+              <span className="text-xs text-muted-foreground">{format(next, "d MMM yyyy")}</span>
             </button>
           ))}
         </section>

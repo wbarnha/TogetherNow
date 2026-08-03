@@ -26,8 +26,7 @@ export function ExportIcsDialog({
   const [includeMilestones, setIncludeMilestones] = useState(true);
 
   const count =
-    (includeEvents ? state.events.length : 0) +
-    (includeMilestones ? state.milestones.length : 0);
+    (includeEvents ? state.events.length : 0) + (includeMilestones ? state.milestones.length : 0);
 
   const ics = useMemo(
     () =>

@@ -193,9 +193,7 @@ export function ExpenseDialog({
                   onChange={(e) => setMyPercent(e.target.value)}
                   className="w-20 rounded-2xl"
                 />
-                <span className="text-sm text-muted-foreground">
-                  % is {myName}&apos;s share
-                </span>
+                <span className="text-sm text-muted-foreground">% is {myName}&apos;s share</span>
               </div>
             ) : null}
           </div>

@@ -137,7 +137,11 @@ export function MilestoneDialog({
                       : "border-border bg-card text-muted-foreground",
                   )}
                 >
-                  {o === "us" ? "Ours" : o === "me" ? state.me.name || "Mine" : state.them.name || "Theirs"}
+                  {o === "us"
+                    ? "Ours"
+                    : o === "me"
+                      ? state.me.name || "Mine"
+                      : state.them.name || "Theirs"}
                 </button>
               ))}
             </div>

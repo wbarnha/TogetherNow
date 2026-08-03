@@ -124,8 +124,8 @@ export function ImportIcsDialog({
         {!parsed ? (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Export an <span className="font-medium">.ics</span> file from Apple Calendar,
-              Google Calendar or Outlook, then pick it here. Everything stays on this device.
+              Export an <span className="font-medium">.ics</span> file from Apple Calendar, Google
+              Calendar or Outlook, then pick it here. Everything stays on this device.
             </p>
             <input
               ref={fileRef}
@@ -219,9 +219,7 @@ export function ImportIcsDialog({
                 className="text-xs text-primary underline-offset-2 hover:underline"
                 onClick={() =>
                   setSelected(
-                    selected.size === parsed.length
-                      ? new Set()
-                      : new Set(parsed.map(icsEventId)),
+                    selected.size === parsed.length ? new Set() : new Set(parsed.map(icsEventId)),
                   )
                 }
               >

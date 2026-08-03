@@ -67,7 +67,8 @@ function CalendarPage() {
       list.push(e);
       map.set(e.date, list);
     }
-    for (const list of map.values()) list.sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""));
+    for (const list of map.values())
+      list.sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""));
     return map;
   }, [state.events]);
 
@@ -200,16 +201,20 @@ function CalendarPage() {
             Nothing planned. Tap to add something to look forward to.
           </button>
         ) : (
-          dayEvents.map((e) => <EventCard key={e.id} event={e} onEdit={() => { setEditing(e); setOpen(true); }} />)
+          dayEvents.map((e) => (
+            <EventCard
+              key={e.id}
+              event={e}
+              onEdit={() => {
+                setEditing(e);
+                setOpen(true);
+              }}
+            />
+          ))
         )}
       </section>
 
-      <EventDialog
-        open={open}
-        onOpenChange={setOpen}
-        editing={editing}
-        defaultDate={selected}
-      />
+      <EventDialog open={open} onOpenChange={setOpen} editing={editing} defaultDate={selected} />
       <ImportIcsDialog open={importOpen} onOpenChange={setImportOpen} />
       <ExportIcsDialog open={exportOpen} onOpenChange={setExportOpen} />
     </AppShell>

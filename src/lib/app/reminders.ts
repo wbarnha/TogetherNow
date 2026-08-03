@@ -7,8 +7,7 @@ import { nextOccurrence, toISODate, wallTimeToInstant } from "./time";
  */
 export async function syncReminders(state: AppState) {
   if (typeof window === "undefined") return;
-  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
-    .Capacitor;
+  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
   if (!cap?.isNativePlatform?.()) return;
 
   const { LocalNotifications } = await import("@capacitor/local-notifications");
@@ -30,9 +29,7 @@ export async function syncReminders(state: AppState) {
   let id = 1;
 
   for (const m of state.milestones) {
-    const target = m.recurring
-      ? nextOccurrence(m.date)
-      : new Date(`${m.date}T09:00:00`);
+    const target = m.recurring ? nextOccurrence(m.date) : new Date(`${m.date}T09:00:00`);
     const at = new Date(target);
     at.setDate(at.getDate() - lead);
     at.setHours(9, 0, 0, 0);

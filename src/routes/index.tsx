@@ -10,7 +10,15 @@ import { EventCard } from "./calendar";
 import { milestoneNext } from "./milestones";
 import { Button } from "@/components/ui/button";
 import { useNow, useStore } from "@/lib/app/store";
-import { callWindow, clockIn, dayIn, gapLabel, hourGap, toISODate, zoneLabel } from "@/lib/app/time";
+import {
+  callWindow,
+  clockIn,
+  dayIn,
+  gapLabel,
+  hourGap,
+  toISODate,
+  zoneLabel,
+} from "@/lib/app/time";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -80,12 +88,7 @@ function Home() {
       }
     >
       <section className="grid grid-cols-2 gap-3">
-        <ClockCard
-          tone="mine"
-          name={state.me.name || "You"}
-          zone={state.me.timeZone}
-          now={now}
-        />
+        <ClockCard tone="mine" name={state.me.name || "You"} zone={state.me.timeZone} now={now} />
         <ClockCard
           tone="theirs"
           name={state.them.name || "Them"}
@@ -115,10 +118,7 @@ function Home() {
       <MoodWidget compact />
 
       {nextMilestone ? (
-        <Link
-          to="/milestones"
-          className="block rounded-3xl bg-primary p-5 text-primary-foreground"
-        >
+        <Link to="/milestones" className="block rounded-3xl bg-primary p-5 text-primary-foreground">
           <p className="text-xs opacity-80">Next big date</p>
           <p className="mt-1 font-display text-2xl font-semibold">{nextMilestone.m.title}</p>
           <p className="mt-1 text-sm opacity-90">
@@ -165,7 +165,11 @@ function Home() {
           <CalendarPlus className="size-5 text-primary" />
           <span className="font-medium">Add a plan</span>
         </Button>
-        <Button asChild variant="outline" className="h-auto flex-col items-start gap-1 rounded-3xl p-4 text-left">
+        <Button
+          asChild
+          variant="outline"
+          className="h-auto flex-col items-start gap-1 rounded-3xl p-4 text-left"
+        >
           <Link to="/messages">
             <MessageCircle className="size-5 text-primary" />
             <span className="font-medium">Reach them</span>

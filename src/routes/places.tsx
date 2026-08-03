@@ -272,10 +272,12 @@ function PlacesPage() {
       </div>
 
       <div className="flex gap-2 rounded-2xl bg-muted/60 p-1">
-        {([
-          { value: "list", label: "List", icon: List },
-          { value: "map", label: "Map", icon: MapIcon },
-        ] as const).map((v) => (
+        {(
+          [
+            { value: "list", label: "List", icon: List },
+            { value: "map", label: "Map", icon: MapIcon },
+          ] as const
+        ).map((v) => (
           <button
             key={v.value}
             type="button"
@@ -283,9 +285,7 @@ function PlacesPage() {
             aria-pressed={view === v.value}
             className={cn(
               "flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-sm transition-colors",
-              view === v.value
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground",
+              view === v.value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
             )}
           >
             <v.icon className="size-4" />
@@ -386,9 +386,7 @@ function PlacesPage() {
               </p>
             </div>
           ) : (
-            <ClientOnly
-              fallback={<div className="h-[420px] w-full animate-pulse bg-muted" />}
-            >
+            <ClientOnly fallback={<div className="h-[420px] w-full animate-pulse bg-muted" />}>
               <Suspense fallback={<div className="h-[420px] w-full animate-pulse bg-muted" />}>
                 <PlacesMap
                   places={mapped}
@@ -408,9 +406,7 @@ function PlacesPage() {
         <section className="rounded-3xl border border-dashed border-border bg-card/60 p-6 text-center">
           <MapPin className="mx-auto size-6 text-muted-foreground" />
           <p className="mt-3 font-display text-lg font-semibold">
-            {state.places.length > 0
-              ? "No ideas match those filters"
-              : "No ideas saved yet"}
+            {state.places.length > 0 ? "No ideas match those filters" : "No ideas saved yet"}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             {state.places.length > 0
@@ -427,10 +423,7 @@ function PlacesPage() {
       ) : (
         <ul className="space-y-3">
           {places.map(({ place, distance }) => (
-            <li
-              key={place.id}
-              className="rounded-3xl border border-border bg-card p-4"
-            >
+            <li key={place.id} className="rounded-3xl border border-border bg-card p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate font-display text-lg font-semibold">{place.name}</p>
@@ -445,19 +438,11 @@ function PlacesPage() {
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{place.note}</p>
                   ) : null}
                 </div>
-                <OwnerBadge
-                  owner={place.owner}
-                  meName={state.me.name}
-                  themName={state.them.name}
-                />
+                <OwnerBadge owner={place.owner} meName={state.me.name} themName={state.them.name} />
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Button
-                  size="sm"
-                  className="rounded-2xl"
-                  onClick={() => planTogether(place)}
-                >
+                <Button size="sm" className="rounded-2xl" onClick={() => planTogether(place)}>
                   <CalendarHeart className="mr-1.5 size-4" />
                   Plan for us
                 </Button>

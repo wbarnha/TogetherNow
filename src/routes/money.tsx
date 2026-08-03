@@ -163,9 +163,7 @@ function MoneyPage() {
                   </p>
                   {amount > 0 ? (
                     <p className="mt-1 text-sm text-muted-foreground">
-                      {owedToMe
-                        ? `${theirName} owes ${myName}`
-                        : `${myName} owes ${theirName}`}
+                      {owedToMe ? `${theirName} owes ${myName}` : `${myName} owes ${theirName}`}
                     </p>
                   ) : null}
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -226,8 +224,8 @@ function MoneyPage() {
                 {formatMoney(p.total, p.currency)}
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {formatMoney(p.me, p.currency)} from {myName} ·{" "}
-                {formatMoney(p.them, p.currency)} from {theirName}
+                {formatMoney(p.me, p.currency)} from {myName} · {formatMoney(p.them, p.currency)}{" "}
+                from {theirName}
               </p>
             </div>
           ))}
@@ -338,9 +336,7 @@ function MoneyPage() {
                     )}
                     style={{ height: `${Math.max(4, (t.amount / peak) * 72)}px` }}
                   />
-                  <span className="text-[10px] text-muted-foreground">
-                    {t.month.slice(5)}
-                  </span>
+                  <span className="text-[10px] text-muted-foreground">{t.month.slice(5)}</span>
                 </div>
               ))}
             </div>
@@ -359,9 +355,7 @@ function MoneyPage() {
                 })}
               </ul>
             ) : (
-              <p className="mt-4 text-sm text-muted-foreground">
-                Nothing logged this month yet.
-              </p>
+              <p className="mt-4 text-sm text-muted-foreground">Nothing logged this month yet.</p>
             )}
           </div>
 
@@ -435,7 +429,11 @@ function ExpenseRow({
         <p
           className={cn(
             "text-sm font-medium",
-            expense.settled ? "text-muted-foreground" : bal >= 0 ? "text-primary" : "text-foreground",
+            expense.settled
+              ? "text-muted-foreground"
+              : bal >= 0
+                ? "text-primary"
+                : "text-foreground",
           )}
         >
           {bal === 0
@@ -495,15 +493,7 @@ function Contribution({
   );
 }
 
-function EmptyCard({
-  icon,
-  title,
-  body,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  body: string;
-}) {
+function EmptyCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
     <div className="rounded-3xl border border-dashed border-border bg-card/60 p-6 text-center">
       <div className="mx-auto flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">

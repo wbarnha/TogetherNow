@@ -29,14 +29,7 @@ export type Milestone = {
 };
 
 export type PlaceCategory =
-  | "food"
-  | "drinks"
-  | "outdoors"
-  | "culture"
-  | "nightlife"
-  | "stay"
-  | "shopping"
-  | "other";
+  "food" | "drinks" | "outdoors" | "culture" | "nightlife" | "stay" | "shopping" | "other";
 
 export type Place = {
   id: string;
@@ -57,12 +50,7 @@ export type Place = {
 };
 
 export type MessengerId =
-  | "imessage"
-  | "facetime"
-  | "discord"
-  | "instagram"
-  | "whatsapp"
-  | "telegram";
+  "imessage" | "facetime" | "discord" | "instagram" | "whatsapp" | "telegram";
 
 /** 1 = rough, 5 = great */
 export type MoodScore = 1 | 2 | 3 | 4 | 5;
@@ -100,13 +88,7 @@ export type TravelOption = {
 
 export type TripStatus = "idea" | "researching" | "booked";
 
-export type ExpenseCategory =
-  | "travel"
-  | "gifts"
-  | "dates"
-  | "subscriptions"
-  | "calls"
-  | "other";
+export type ExpenseCategory = "travel" | "gifts" | "dates" | "subscriptions" | "calls" | "other";
 
 /** How an expense is divided between the two of you. */
 export type SplitMode = "even" | "mine" | "theirs" | "custom";
@@ -198,9 +180,7 @@ export type AppState = {
 export const emptyProfile = (name = ""): Profile => ({
   name,
   timeZone:
-    typeof Intl !== "undefined"
-      ? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
-      : "UTC",
+    typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" : "UTC",
   handles: {},
 });
 

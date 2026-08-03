@@ -5,7 +5,15 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/lib/app/store";
-import { MOODS, moodFor, moodOption, recentDates, todayIn, checkInStreak, moodsFor } from "@/lib/app/mood";
+import {
+  MOODS,
+  moodFor,
+  moodOption,
+  recentDates,
+  todayIn,
+  checkInStreak,
+  moodsFor,
+} from "@/lib/app/mood";
 import { cn } from "@/lib/utils";
 import type { MoodScore } from "@/lib/app/types";
 
