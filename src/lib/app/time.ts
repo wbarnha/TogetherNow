@@ -111,7 +111,7 @@ export function gapLabel(gap: number) {
 export function wallTimeToInstant(dateISO: string, time: string, zone: string) {
   const [y, m, d] = dateISO.split("-").map(Number);
   const [hh, mm] = time.split(":").map(Number);
-  const naive = Date.UTC(y, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0);
+  const naive = Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0);
   let offset = zoneOffsetMinutes(zone, new Date(naive));
   offset = zoneOffsetMinutes(zone, new Date(naive - offset * 60000));
   return new Date(naive - offset * 60000);
