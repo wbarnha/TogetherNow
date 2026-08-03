@@ -11,18 +11,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: npm
+          bun-version: latest
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
-      - run: npm ci --no-audit --no-fund
-      - run: npm run build
+      - run: bun install --frozen-lockfile
+      - run: bun run build
       - name: Sync Capacitor
-        run: npx cap sync android
+        run: bunx cap sync android
       - name: Assemble debug APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
@@ -37,14 +36,13 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: npm
-      - run: npm ci --no-audit --no-fund
-      - run: npm run build
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run build
       - name: Sync Capacitor
-        run: npx cap sync ios
+        run: bunx cap sync ios
       - name: Build app (no code signing)
         working-directory: ios/App
         run: |
