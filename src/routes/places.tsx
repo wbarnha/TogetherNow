@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { ClientOnly } from "@tanstack/react-router";
-import { CalendarPlus, Check, ExternalLink, List, Map, MapPin, Trash2, Upload } from "lucide-react";
+import { CalendarPlus, Check, ExternalLink, List, Map, MapPin, Share2, Trash2, Upload } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { EventDialog } from "@/components/app/EventDialog";
+import { ExportPlacesDialog } from "@/components/app/ExportPlacesDialog";
 import { ImportPlacesDialog } from "@/components/app/ImportPlacesDialog";
 import { OwnerBadge } from "@/components/app/OwnerBadge";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ const FILTERS = [
 function PlacesPage() {
   const { state, upsertPlace, removePlace } = useStore();
   const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["value"]>("want");
   const [planning, setPlanning] = useState<Place | null>(null);
   const [view, setView] = useState<"list" | "map">("list");
@@ -66,14 +68,26 @@ function PlacesPage() {
       title="Date ideas"
       subtitle="Saved places, waiting for the next time you're together"
       action={
-        <Button
-          size="icon"
-          className="rounded-2xl"
-          aria-label="Import saved places"
-          onClick={() => setImportOpen(true)}
-        >
-          <Upload className="size-5" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="icon"
+            variant="outline"
+            className="rounded-2xl"
+            aria-label="Export date ideas"
+            disabled={state.places.length === 0}
+            onClick={() => setExportOpen(true)}
+          >
+            <Share2 className="size-5" />
+          </Button>
+          <Button
+            size="icon"
+            className="rounded-2xl"
+            aria-label="Import saved places"
+            onClick={() => setImportOpen(true)}
+          >
+            <Upload className="size-5" />
+          </Button>
+        </div>
       }
     >
       <div className="flex gap-2">
@@ -229,6 +243,7 @@ function PlacesPage() {
       )}
 
       <ImportPlacesDialog open={importOpen} onOpenChange={setImportOpen} />
+      <ExportPlacesDialog open={exportOpen} onOpenChange={setExportOpen} />
       <EventDialog
         open={planning !== null}
         onOpenChange={(v) => {
