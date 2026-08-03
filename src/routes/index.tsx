@@ -117,6 +117,25 @@ function Home() {
 
       <MoodWidget compact />
 
+      {!state.pairedAt ? (
+        <Link
+          to="/pair"
+          className="flex items-center gap-3 rounded-3xl border border-primary/30 bg-primary/5 p-4"
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+            <QrCode className="size-5" />
+          </span>
+          <span className="text-sm">
+            <span className="block font-medium">
+              Invite {state.them.name || "your partner"}
+            </span>
+            <span className="block text-muted-foreground">
+              Send a link to connect and start sharing Together items.
+            </span>
+          </span>
+        </Link>
+      ) : null}
+
       {nextMilestone ? (
         <Link to="/milestones" className="block rounded-3xl bg-primary p-5 text-primary-foreground">
           <p className="text-xs opacity-80">Next big date</p>
