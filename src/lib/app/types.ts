@@ -100,6 +100,54 @@ export type TravelOption = {
 
 export type TripStatus = "idea" | "researching" | "booked";
 
+export type ExpenseCategory =
+  | "travel"
+  | "gifts"
+  | "dates"
+  | "subscriptions"
+  | "calls"
+  | "other";
+
+/** How an expense is divided between the two of you. */
+export type SplitMode = "even" | "mine" | "theirs" | "custom";
+
+export type Expense = {
+  id: string;
+  title: string;
+  amount: number;
+  currency: string;
+  /** yyyy-MM-dd */
+  date: string;
+  paidBy: "me" | "them";
+  split: SplitMode;
+  /** my share, 0-100, only used when split === "custom" */
+  myPercent?: number | undefined;
+  category: ExpenseCategory;
+  /** optional link to a trip */
+  tripId?: string | undefined;
+  notes?: string | undefined;
+  /** already squared up */
+  settled: boolean;
+  updatedAt: number;
+};
+
+export type SavingsGoal = {
+  id: string;
+  title: string;
+  target: number;
+  currency: string;
+  /** yyyy-MM-dd — when the money is needed */
+  deadline?: string | undefined;
+  savedByMe: number;
+  savedByThem: number;
+  /** planned monthly contributions */
+  monthlyByMe: number;
+  monthlyByThem: number;
+  tripId?: string | undefined;
+  notes?: string | undefined;
+  updatedAt: number;
+};
+
 export type Trip = {
   id: string;
   title: string;
@@ -141,6 +189,8 @@ export type AppState = {
   places: Place[];
   trips: Trip[];
   moods: MoodEntry[];
+  expenses: Expense[];
+  goals: SavingsGoal[];
   reminderLeadDays: number;
   theme: "light" | "dark";
 };
@@ -165,6 +215,8 @@ export const initialState = (): AppState => ({
   places: [],
   trips: [],
   moods: [],
+  expenses: [],
+  goals: [],
   reminderLeadDays: 3,
   theme: "light",
 });
