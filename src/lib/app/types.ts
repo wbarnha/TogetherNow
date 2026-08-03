@@ -190,6 +190,7 @@ export type CalendarSource = {
 
 export type AppState = {
   version: 1;
+
   onboarded: boolean;
   me: Profile;
   them: Profile;
