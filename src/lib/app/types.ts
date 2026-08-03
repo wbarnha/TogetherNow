@@ -168,6 +168,8 @@ export type AppState = {
   them: Profile;
   /** relationship start, yyyy-MM-dd */
   startDate: string | null;
+  /** when a partner's code was first merged in — null until you two are connected */
+  pairedAt: number | null;
   events: PlanEvent[];
   milestones: Milestone[];
   places: Place[];
@@ -192,6 +194,7 @@ export const initialState = (): AppState => ({
   me: emptyProfile(),
   them: { ...emptyProfile(), timeZone: "Europe/London" },
   startDate: null,
+  pairedAt: null,
   events: [],
   milestones: [],
   places: [],
