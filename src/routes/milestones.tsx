@@ -1,0 +1,171 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { format } from "date-fns";
+import { Cake, Gift, HeartHandshake, Plus, Sparkles } from "lucide-react";
+import { AppShell } from "@/components/app/AppShell";
+import { MilestoneDialog } from "@/components/app/MilestoneDialog";
+import { OwnerBadge } from "@/components/app/OwnerBadge";
+import { Button } from "@/components/ui/button";
+import { useStore } from "@/lib/app/store";
+import { daysUntil, nextOccurrence, toISODate } from "@/lib/app/time";
+import type { Milestone } from "@/lib/app/types";
+
+export const Route = createFileRoute("/milestones")({
+  head: () => ({
+    meta: [
+      { title: "Dates that matter — Together Now" },
+      {
+        name: "description",
+        content:
+          "Birthdays, anniversaries, and the day you met — with countdowns so nothing slips by.",
+      },
+      { property: "og:title", content: "Dates that matter — Together Now" },
+      {
+        property: "og:description",
+        content: "Countdowns to every birthday, anniversary, and milestone.",
+      },
+    ],
+  }),
+  component: MilestonesPage,
+});
+
+const ICONS = {
+  birthday: Cake,
+  anniversary: HeartHandshake,
+  "first-met": Sparkles,
+  custom: Gift,
+} as const;
+
+export function milestoneNext(m: Milestone) {
+  const next = m.recurring ? nextOccurrence(m.date) : new Date(`${m.date}T00:00:00`);
+  const iso = toISODate(next);
+  const days = daysUntil(iso);
+  const years = m.recurring
+    ? next.getFullYear() - Number(m.date.split("-")[0])
+    : null;
+  return { next, iso, days, years };
+}
+
+function MilestonesPage() {
+  const { state } = useStore();
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Milestone | null>(null);
+
+  const sorted = useMemo(() => {
+    return [...state.milestones]
+      .map((m) => ({ m, ...milestoneNext(m) }))
+      .filter((x) => x.m.recurring || x.days >= 0)
+      .sort((a, b) => a.days - b.days);
+  }, [state.milestones]);
+
+  const past = useMemo(
+    () =>
+      state.milestones
+        .map((m) => ({ m, ...milestoneNext(m) }))
+        .filter((x) => !x.m.recurring && x.days < 0)
+        .sort((a, b) => b.days - a.days),
+    [state.milestones],
+  );
+
+  return (
+    <AppShell
+      title="Dates"
+      subtitle="The ones you can't afford to forget."
+      action={
+        <Button
+          size="icon"
+          className="rounded-2xl"
+          onClick={() => {
+            setEditing(null);
+            setOpen(true);
+          }}
+        >
+          <Plus className="size-5" />
+        </Button>
+      }
+    >
+      {sorted.length === 0 && past.length === 0 ? (
+        <button
+          type="button"
+          onClick={() => {
+            setEditing(null);
+            setOpen(true);
+          }}
+          className="w-full rounded-3xl border border-dashed border-border bg-card/50 p-8 text-sm text-muted-foreground"
+        >
+          Add their birthday, your anniversary, the day you met.
+        </button>
+      ) : null}
+
+      <div className="space-y-3">
+        {sorted.map(({ m, days, years, next }) => {
+          const Icon = ICONS[m.kind];
+          return (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => {
+                setEditing(m);
+                setOpen(true);
+              }}
+              className="flex w-full items-center gap-4 rounded-3xl border border-border bg-card p-4 text-left transition-shadow hover:shadow-sm"
+            >
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Icon className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{m.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {format(next, "EEE d MMM yyyy")}
+                  {years && years > 0 ? ` · turns ${years}` : ""}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="font-display text-2xl leading-none font-semibold text-primary">
+                  {days === 0 ? "Today" : days}
+                </p>
+                {days !== 0 ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    {days === 1 ? "day away" : "days away"}
+                  </p>
+                ) : null}
+                <OwnerBadge
+                  owner={m.owner}
+                  meName={state.me.name}
+                  themName={state.them.name}
+                  className="mt-1"
+                />
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {past.length > 0 ? (
+        <section className="space-y-3 pt-2">
+          <h2 className="px-1 font-display text-lg font-semibold text-muted-foreground">
+            Already passed
+          </h2>
+          {past.map(({ m, next }) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => {
+                setEditing(m);
+                setOpen(true);
+              }}
+              className="flex w-full items-center justify-between rounded-3xl border border-border bg-card/60 p-4 text-left"
+            >
+              <span className="truncate text-sm">{m.title}</span>
+              <span className="text-xs text-muted-foreground">
+                {format(next, "d MMM yyyy")}
+              </span>
+            </button>
+          ))}
+        </section>
+      ) : null}
+
+      <MilestoneDialog open={open} onOpenChange={setOpen} editing={editing} />
+    </AppShell>
+  );
+}
