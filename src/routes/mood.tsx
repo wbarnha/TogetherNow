@@ -159,5 +159,3 @@ function MoodList({
     </section>
   );
 }
-
-export { MOODS };
