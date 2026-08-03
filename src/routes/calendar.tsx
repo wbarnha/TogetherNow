@@ -11,9 +11,10 @@ import {
   startOfWeek,
   endOfWeek,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { CalendarPlus, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { EventDialog } from "@/components/app/EventDialog";
+import { ImportIcsDialog } from "@/components/app/ImportIcsDialog";
 import { OwnerBadge } from "@/components/app/OwnerBadge";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/lib/app/store";
@@ -45,6 +46,7 @@ function CalendarPage() {
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const [selected, setSelected] = useState(() => toISODate(new Date()));
   const [open, setOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<PlanEvent | null>(null);
 
   const days = useMemo(
@@ -74,16 +76,28 @@ function CalendarPage() {
       title="Plans"
       subtitle={`${zoneLabel(state.me.timeZone)} · ${zoneLabel(state.them.timeZone)}`}
       action={
-        <Button
-          size="icon"
-          className="rounded-2xl"
-          onClick={() => {
-            setEditing(null);
-            setOpen(true);
-          }}
-        >
-          <Plus className="size-5" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="icon"
+            variant="outline"
+            className="rounded-2xl"
+            aria-label="Import calendar file"
+            onClick={() => setImportOpen(true)}
+          >
+            <CalendarPlus className="size-5" />
+          </Button>
+          <Button
+            size="icon"
+            className="rounded-2xl"
+            aria-label="New plan"
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+          >
+            <Plus className="size-5" />
+          </Button>
+        </div>
       }
     >
       <section className="rounded-3xl border border-border bg-card p-4">
@@ -185,6 +199,7 @@ function CalendarPage() {
         editing={editing}
         defaultDate={selected}
       />
+      <ImportIcsDialog open={importOpen} onOpenChange={setImportOpen} />
     </AppShell>
   );
 }
