@@ -20,6 +20,8 @@ import {
   type PlanEvent,
   type SavingsGoal,
   type Trip,
+  type WatchEntry,
+  type WatchImport,
 } from "./types";
 import { syncReminders } from "./reminders";
 import { publishWidgetSnapshot } from "./widget";
@@ -51,6 +53,14 @@ type Ctx = {
     meta: Omit<ChatImport, "id" | "importedAt" | "messageCount">,
   ) => number;
   removeChatImport: (id: string, alsoMessages: boolean) => void;
+  /** merges a viewing-history export, skipping entries already known */
+  importWatch: (
+    entries: WatchEntry[],
+    meta: Omit<WatchImport, "id" | "importedAt" | "entryCount">,
+  ) => number;
+  removeWatchImport: (id: string, alsoEntries: boolean) => void;
+  upsertWatchEntry: (e: WatchEntry) => void;
+  removeWatchEntry: (id: string) => void;
   reset: () => void;
 };
 
