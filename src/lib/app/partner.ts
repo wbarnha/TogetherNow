@@ -6,6 +6,7 @@ export const SHARING_ITEMS: { key: keyof SharingPrefs; label: string; hint: stri
   { key: "ideas", label: "Together ideas", hint: "Date ideas you added to the Together list" },
   { key: "moods", label: "Mood check-ins", hint: "Your last 30 daily check-ins" },
   { key: "money", label: "Money", hint: "Shared expenses and savings goals" },
+  { key: "watch", label: "Viewing habits", hint: "Your Netflix, Hulu, Steam and Crunchyroll activity" },
 ];
 
 /** How many of my items each sharing switch currently covers. */
@@ -16,6 +17,7 @@ export function sharingCounts(state: AppState): Record<keyof SharingPrefs, numbe
     ideas: state.places.filter((p) => p.shortlisted && p.owner !== "them").length,
     moods: state.moods.filter((m) => m.owner === "me").slice(-30).length,
     money: state.expenses.length + state.goals.length,
+    watch: state.watchEntries.filter((e) => e.owner === "me").length,
   };
 }
 
@@ -35,6 +37,7 @@ export function disconnectPartner(state: AppState, removeTheirItems = false): Ap
     places: base.places.filter((p) => p.owner !== "them"),
     moods: base.moods.filter((m) => m.owner !== "them"),
     expenses: base.expenses.filter((e) => e.paidBy !== "them"),
+    watchEntries: base.watchEntries.filter((e) => e.owner !== "them"),
   };
 }
 

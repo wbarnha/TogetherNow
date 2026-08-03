@@ -7,6 +7,7 @@ import {
   Plane,
   Settings,
   Sparkles,
+  Tv,
   Wallet,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -19,6 +20,7 @@ const TABS = [
   { to: "/places", label: "Ideas", icon: MapPin },
   { to: "/travel", label: "Travel", icon: Plane },
   { to: "/money", label: "Money", icon: Wallet },
+  { to: "/watch", label: "Watch", icon: Tv },
   { to: "/messages", label: "Reach", icon: MessageCircle },
   { to: "/settings", label: "You", icon: Settings },
 ] as const;

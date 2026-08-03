@@ -20,6 +20,8 @@ import {
   type PlanEvent,
   type SavingsGoal,
   type Trip,
+  type WatchEntry,
+  type WatchImport,
 } from "./types";
 import { syncReminders } from "./reminders";
 import { publishWidgetSnapshot } from "./widget";
@@ -51,6 +53,14 @@ type Ctx = {
     meta: Omit<ChatImport, "id" | "importedAt" | "messageCount">,
   ) => number;
   removeChatImport: (id: string, alsoMessages: boolean) => void;
+  /** merges a viewing-history export, skipping entries already known */
+  importWatch: (
+    entries: WatchEntry[],
+    meta: Omit<WatchImport, "id" | "importedAt" | "entryCount">,
+  ) => number;
+  removeWatchImport: (id: string, alsoEntries: boolean) => void;
+  upsertWatchEntry: (e: WatchEntry) => void;
+  removeWatchEntry: (id: string) => void;
   reset: () => void;
 };
 
@@ -70,7 +80,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       if (raw) {
         const parsed = JSON.parse(raw) as AppState;
         if (parsed && parsed.version === 1) {
-          setInternal({ ...initialState(), ...parsed });
+          const base = initialState();
+          setInternal({
+            ...base,
+            ...parsed,
+            sharing: { ...base.sharing, ...(parsed.sharing ?? {}) },
+          });
         }
       }
     } catch {
@@ -250,6 +265,53 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
                 : prev.chatMessages,
           };
         }),
+      importWatch: (entries, meta) => {
+        let added = 0;
+        setState((prev) => {
+          const known = new Set(prev.watchEntries.map((e) => e.id));
+          const fresh = entries.filter((e) => !known.has(e.id));
+          added = fresh.length;
+          if (!fresh.length) return prev;
+          const record: WatchImport = {
+            ...meta,
+            id: newId(),
+            entryCount: fresh.length,
+            importedAt: Date.now(),
+          };
+          return {
+            ...prev,
+            watchEntries: [...prev.watchEntries, ...fresh].sort((a, b) => a.at - b.at),
+            watchImports: [...prev.watchImports, record],
+          };
+        });
+        return added;
+      },
+      removeWatchImport: (id, alsoEntries) =>
+        setState((prev) => {
+          const record = prev.watchImports.find((i) => i.id === id);
+          return {
+            ...prev,
+            watchImports: prev.watchImports.filter((i) => i.id !== id),
+            watchEntries:
+              alsoEntries && record
+                ? prev.watchEntries.filter(
+                    (e) => !(e.service === record.service && e.owner === record.owner),
+                  )
+                : prev.watchEntries,
+          };
+        }),
+      upsertWatchEntry: (entry) =>
+        setState((prev) => ({
+          ...prev,
+          watchEntries: prev.watchEntries.some((e) => e.id === entry.id)
+            ? prev.watchEntries.map((e) => (e.id === entry.id ? entry : e))
+            : [...prev.watchEntries, entry].sort((a, b) => a.at - b.at),
+        })),
+      removeWatchEntry: (id) =>
+        setState((prev) => ({
+          ...prev,
+          watchEntries: prev.watchEntries.filter((e) => e.id !== id),
+        })),
     }),
     [state, hydrated, setState],
   );

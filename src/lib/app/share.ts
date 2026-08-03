@@ -7,6 +7,7 @@ import type {
   Place,
   PlanEvent,
   SavingsGoal,
+  WatchEntry,
 } from "./types";
 
 export type SharePayload = {
@@ -21,13 +22,22 @@ export type SharePayload = {
   places?: Place[];
   expenses?: Expense[];
   goals?: SavingsGoal[];
+  /** my recent viewing / playing activity */
+  watch?: WatchEntry[];
   at: number;
 };
 
 const PREFIX = "TN1:";
 
 export function buildShareCode(state: AppState): string {
-  const share = state.sharing ?? { plans: true, dates: true, ideas: true, moods: true, money: true };
+  const share = state.sharing ?? {
+    plans: true,
+    dates: true,
+    ideas: true,
+    moods: true,
+    money: true,
+    watch: true,
+  };
   const payload: SharePayload = {
     v: 1,
     from: state.me.name || "Partner",
@@ -41,6 +51,9 @@ export function buildShareCode(state: AppState): string {
     places: share.ideas ? state.places.filter((p) => p.shortlisted && p.owner !== "them") : [],
     expenses: share.money ? state.expenses : [],
     goals: share.money ? state.goals : [],
+    watch: share.watch
+      ? (state.watchEntries ?? []).filter((e) => e.owner === "me").slice(-200)
+      : [],
     at: Date.now(),
   };
   return PREFIX + LZString.compressToEncodedURIComponent(JSON.stringify(payload));
@@ -102,6 +115,9 @@ export function applyShareCode(state: AppState, payload: SharePayload) {
     monthlyByThem: g.monthlyByMe,
   }));
   const goals = mergeById(state.goals, incomingGoals);
+  const incomingWatch: WatchEntry[] = (payload.watch ?? []).map((e) => ({ ...e, owner: "them" }));
+  const knownWatch = new Set((state.watchEntries ?? []).map((e) => e.id));
+  const freshWatch = incomingWatch.filter((e) => !knownWatch.has(e.id));
   const next: AppState = {
     ...state,
     them: {
@@ -119,12 +135,19 @@ export function applyShareCode(state: AppState, payload: SharePayload) {
     places: places.items,
     expenses: expenses.items,
     goals: goals.items,
+    watchEntries: [...(state.watchEntries ?? []), ...freshWatch].sort((a, b) => a.at - b.at),
   };
   return {
     state: next,
     summary: {
       from: payload.from,
-      added: events.added + milestones.added + places.added + expenses.added + goals.added,
+      added:
+        events.added +
+        milestones.added +
+        places.added +
+        expenses.added +
+        goals.added +
+        freshWatch.length,
       updated:
         events.updated + milestones.updated + places.updated + expenses.updated + goals.updated,
     },
@@ -142,5 +165,6 @@ export function previewShareCode(payload: SharePayload) {
     places: (payload.places ?? []).length,
     goals: (payload.goals ?? []).length,
     expenses: (payload.expenses ?? []).length,
+    watch: (payload.watch ?? []).length,
   };
 }
