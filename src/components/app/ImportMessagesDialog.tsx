@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { newId, useStore } from "@/lib/app/store";
+import { useStore } from "@/lib/app/store";
 import {
   CHAT_SOURCES,
   guessOwners,
@@ -202,7 +202,7 @@ export function ImportMessagesDialog({
           <span className="text-xs text-muted-foreground">
             {total ? `${total} messages ready` : ""}
           </span>
-          <Button onClick={doImport} disabled={!staged.length} key={newId.name}>
+          <Button onClick={doImport} disabled={!staged.length}>
             <MessagesSquare className="size-4" /> Add to history
           </Button>
         </DialogFooter>
