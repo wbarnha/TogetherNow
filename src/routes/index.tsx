@@ -112,6 +112,8 @@ function Home() {
         </div>
       ) : null}
 
+      <MoodWidget compact />
+
       {nextMilestone ? (
         <Link
           to="/milestones"
