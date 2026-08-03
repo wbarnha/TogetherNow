@@ -68,10 +68,7 @@ export function applyShareCode(state: AppState, payload: SharePayload) {
   const events = mergeById(state.events, flip(payload.events));
   const milestones = mergeById(state.milestones, flip(payload.milestones));
   const incomingMoods: MoodEntry[] = (payload.moods ?? []).map((m) => ({ ...m, owner: "them" }));
-  const moods = mergeById(
-    state.moods.filter((m) => m.owner === "me"),
-    incomingMoods,
-  );
+  const moods = mergeById(state.moods, incomingMoods);
   const next: AppState = {
     ...state,
     them: {
