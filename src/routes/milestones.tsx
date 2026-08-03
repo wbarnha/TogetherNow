@@ -1,13 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Cake, Gift, HeartHandshake, Plus, Sparkles } from "lucide-react";
+import { Bell, BellOff, Cake, Gift, HeartHandshake, Plus, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/app/AppShell";
 import { MilestoneDialog } from "@/components/app/MilestoneDialog";
 import { OwnerBadge } from "@/components/app/OwnerBadge";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/lib/app/store";
 import { daysUntil, nextOccurrence, toISODate } from "@/lib/app/time";
+import { buildMilestoneReminders } from "@/lib/app/milestone-reminders";
+import { ensureNotificationPermission, syncReminders } from "@/lib/app/reminders";
 import type { Milestone } from "@/lib/app/types";
 
 export const Route = createFileRoute("/milestones")({
@@ -48,6 +51,31 @@ function MilestonesPage() {
   const { state } = useStore();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Milestone | null>(null);
+
+  const reminders = useMemo(() => buildMilestoneReminders(state), [state]);
+  const nextByMilestone = useMemo(() => {
+    const map = new Map<string, (typeof reminders)[number]>();
+    for (const r of reminders) if (!map.has(r.milestoneId)) map.set(r.milestoneId, r);
+    return map;
+  }, [reminders]);
+
+  const enableNotifications = async () => {
+    const perm = await ensureNotificationPermission();
+    if (perm === "granted") {
+      await syncReminders(state);
+      toast.success("Reminders are on", {
+        description: `${reminders.length} nudge${reminders.length === 1 ? "" : "s"} scheduled on this device.`,
+      });
+    } else if (perm === "denied") {
+      toast.error("Notifications are blocked", {
+        description: "Enable them for Together Now in your phone's settings.",
+      });
+    } else {
+      toast("Install the app to get notifications", {
+        description: "Reminders fire on your phone; the browser preview can't send them.",
+      });
+    }
+  };
 
   const sorted = useMemo(() => {
     return [...state.milestones]
@@ -98,6 +126,7 @@ function MilestonesPage() {
       <div className="space-y-3">
         {sorted.map(({ m, days, years, next }) => {
           const Icon = ICONS[m.kind];
+          const nextReminder = nextByMilestone.get(m.id);
           return (
             <button
               key={m.id}
@@ -116,6 +145,17 @@ function MilestonesPage() {
                 <p className="text-xs text-muted-foreground">
                   {format(next, "EEE d MMM yyyy")}
                   {years && years > 0 ? ` · turns ${years}` : ""}
+                </p>
+                <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+                  {m.remindersOff || !nextReminder ? (
+                    <>
+                      <BellOff className="size-3" /> No reminder
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="size-3" /> Reminder {format(nextReminder.at, "d MMM, h a")}
+                    </>
+                  )}
                 </p>
               </div>
               <div className="text-right">
