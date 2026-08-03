@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CalendarRouteImport } from './routes/calendar'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as MilestonesRouteImport } from './routes/milestones'
 import { Route as MoneyRouteImport } from './routes/money'
@@ -30,6 +31,11 @@ const IndexRoute = IndexRouteImport.update({
 const CalendarRoute = CalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MessagesRoute = MessagesRouteImport.update({
@@ -86,6 +92,7 @@ const TravelRoute = TravelRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/calendar': typeof CalendarRoute
+  '/history': typeof HistoryRoute
   '/messages': typeof MessagesRoute
   '/milestones': typeof MilestonesRoute
   '/money': typeof MoneyRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/calendar': typeof CalendarRoute
+  '/history': typeof HistoryRoute
   '/messages': typeof MessagesRoute
   '/milestones': typeof MilestonesRoute
   '/money': typeof MoneyRoute
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/calendar': typeof CalendarRoute
+  '/history': typeof HistoryRoute
   '/messages': typeof MessagesRoute
   '/milestones': typeof MilestonesRoute
   '/money': typeof MoneyRoute
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/calendar'
+    | '/history'
     | '/messages'
     | '/milestones'
     | '/money'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/calendar'
+    | '/history'
     | '/messages'
     | '/milestones'
     | '/money'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/calendar'
+    | '/history'
     | '/messages'
     | '/milestones'
     | '/money'
@@ -174,6 +186,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CalendarRoute: typeof CalendarRoute
+  HistoryRoute: typeof HistoryRoute
   MessagesRoute: typeof MessagesRoute
   MilestonesRoute: typeof MilestonesRoute
   MoneyRoute: typeof MoneyRoute
@@ -200,6 +213,13 @@ declare module '@tanstack/react-router' {
       path: '/calendar'
       fullPath: '/calendar'
       preLoaderRoute: typeof CalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/messages': {
@@ -278,6 +298,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CalendarRoute: CalendarRoute,
+  HistoryRoute: HistoryRoute,
   MessagesRoute: MessagesRoute,
   MilestonesRoute: MilestonesRoute,
   MoneyRoute: MoneyRoute,

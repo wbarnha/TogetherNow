@@ -165,7 +165,8 @@ function MessagesPage() {
 
       <p className="px-1 pb-2 text-xs leading-relaxed text-muted-foreground">
         These are shortcuts, not inboxes. Apple, Meta, and Discord don&apos;t let other apps read
-        your message history, so nothing you say is stored here.
+        your conversations live — history only comes from the exports you import, and it stays on
+        this device.
       </p>
 
       <ImportMessagesDialog open={importOpen} onOpenChange={setImportOpen} />
