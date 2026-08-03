@@ -4,11 +4,11 @@ import {
   defaultLeads,
   reminderBody,
 } from "../milestone-reminders";
-import { DEFAULT_STATE } from "../types";
+import { initialState } from "../types";
 import type { AppState, Milestone } from "../types";
 
 function stateWith(milestones: Milestone[]): AppState {
-  return { ...DEFAULT_STATE, milestones } as AppState;
+  return { ...initialState(), milestones } as AppState;
 }
 
 const birthday: Milestone = {
