@@ -11,11 +11,15 @@ import {
   initialState,
   type AppState,
   type Milestone,
+  type MoodEntry,
+  type MoodScore,
   type Place,
   type PlanEvent,
   type Trip,
 } from "./types";
 import { syncReminders } from "./reminders";
+import { publishWidgetSnapshot } from "./widget";
+import { todayIn } from "./mood";
 
 const KEY = "together-now:v1";
 
@@ -31,6 +35,8 @@ type Ctx = {
   removePlace: (id: string) => void;
   upsertTrip: (t: Omit<Trip, "updatedAt"> & { updatedAt?: number }) => void;
   removeTrip: (id: string) => void;
+  setMood: (score: MoodScore, note?: string, date?: string) => void;
+  clearMood: (date?: string) => void;
   reset: () => void;
 };
 
@@ -70,6 +76,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     root.classList.toggle("dark", state.theme === "dark");
     void syncReminders(state).catch(() => {
       /* notifications are best-effort */
+    });
+    void publishWidgetSnapshot(state).catch(() => {
+      /* widgets are best-effort */
     });
   }, [state, hydrated]);
 
@@ -137,6 +146,33 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         }),
       removeTrip: (id) =>
         setState((prev) => ({ ...prev, trips: prev.trips.filter((t) => t.id !== id) })),
+      setMood: (score, note, date) =>
+        setState((prev) => {
+          const day = date ?? todayIn(prev.me.timeZone);
+          const existing = prev.moods.find((m) => m.owner === "me" && m.date === day);
+          const entry: MoodEntry = {
+            id: existing?.id ?? newId(),
+            owner: "me",
+            date: day,
+            score,
+            note: note?.trim() ? note.trim() : undefined,
+            updatedAt: Date.now(),
+          };
+          return {
+            ...prev,
+            moods: existing
+              ? prev.moods.map((m) => (m.id === existing.id ? entry : m))
+              : [...prev.moods, entry],
+          };
+        }),
+      clearMood: (date) =>
+        setState((prev) => {
+          const day = date ?? todayIn(prev.me.timeZone);
+          return {
+            ...prev,
+            moods: prev.moods.filter((m) => !(m.owner === "me" && m.date === day)),
+          };
+        }),
       reset: () => setState(() => initialState()),
     }),
     [state, hydrated, setState],

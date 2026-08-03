@@ -1,5 +1,5 @@
 import LZString from "lz-string";
-import type { AppState, Milestone, PlanEvent } from "./types";
+import type { AppState, Milestone, MoodEntry, PlanEvent } from "./types";
 
 export type SharePayload = {
   v: 1;
@@ -8,6 +8,7 @@ export type SharePayload = {
   startDate: string | null;
   events: PlanEvent[];
   milestones: Milestone[];
+  moods?: MoodEntry[];
   at: number;
 };
 
@@ -22,6 +23,8 @@ export function buildShareCode(state: AppState): string {
     // things I own or that are shared become "theirs"/"ours" on their device
     events: state.events.filter((e) => e.owner !== "them"),
     milestones: state.milestones.filter((m) => m.owner !== "them"),
+    // my recent mood check-ins so they land as "them" on the other device
+    moods: state.moods.filter((m) => m.owner === "me").slice(-30),
     at: Date.now(),
   };
   return PREFIX + LZString.compressToEncodedURIComponent(JSON.stringify(payload));
@@ -64,6 +67,11 @@ function mergeById<T extends { id: string; updatedAt: number }>(mine: T[], incom
 export function applyShareCode(state: AppState, payload: SharePayload) {
   const events = mergeById(state.events, flip(payload.events));
   const milestones = mergeById(state.milestones, flip(payload.milestones));
+  const incomingMoods: MoodEntry[] = (payload.moods ?? []).map((m) => ({ ...m, owner: "them" }));
+  const moods = mergeById(
+    state.moods.filter((m) => m.owner === "me"),
+    incomingMoods,
+  );
   const next: AppState = {
     ...state,
     them: {
@@ -74,6 +82,7 @@ export function applyShareCode(state: AppState, payload: SharePayload) {
     startDate: state.startDate ?? payload.startDate,
     events: events.items,
     milestones: milestones.items,
+    moods: moods.items,
   };
   return {
     state: next,
