@@ -21,6 +21,7 @@ import { AppShell } from "@/components/app/AppShell";
 import { EventDialog } from "@/components/app/EventDialog";
 import { ExportPlacesDialog } from "@/components/app/ExportPlacesDialog";
 import { ImportPlacesDialog } from "@/components/app/ImportPlacesDialog";
+import { LocationDialog } from "@/components/app/LocationDialog";
 import { OwnerBadge } from "@/components/app/OwnerBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,7 @@ import {
   placeCategory,
   PLACE_CATEGORIES,
 } from "@/lib/app/places";
+import type { GeoResult } from "@/lib/app/geocode";
 import { newId, useStore } from "@/lib/app/store";
 import { toISODate } from "@/lib/app/time";
 import type { Place, PlaceCategory, PlanEvent } from "@/lib/app/types";
@@ -106,24 +108,33 @@ function PlacesPage() {
   const [category, setCategory] = useState<PlaceCategory | "all">("all");
   const [sort, setSort] = useState<(typeof SORTS)[number]["value"]>("recent");
   const [radius, setRadius] = useState<(typeof RADII)[number]["value"]>("any");
-  const [origin, setOrigin] = useState<{ lat: number; lng: number } | null>(null);
+  const [origin, setOrigin] = useState<GeoResult | null>(null);
   const [locating, setLocating] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
 
   const locate = () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      toast.error("Your device can't share a location");
+      toast.error("Your device can't share a location — pick an area instead");
+      setLocationOpen(true);
       return;
     }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setOrigin({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setOrigin({
+          label: "your current location",
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
         setLocating(false);
         toast.success("Using your current location");
       },
       () => {
         setLocating(false);
-        toast.error("Couldn't get your location — check location permissions");
+        toast.error("Couldn't get your location", {
+          description: "Permission may be blocked — choose a nearby area by hand instead.",
+          action: { label: "Pick area", onClick: () => setLocationOpen(true) },
+        });
       },
       { timeout: 10_000 },
     );
@@ -355,22 +366,38 @@ function PlacesPage() {
       </div>
 
       {needsLocation ? (
-        <button
-          type="button"
-          onClick={locate}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border px-3 py-2 text-sm text-muted-foreground"
-        >
-          <Crosshair className="size-4" />
-          {locating ? "Finding you…" : "Use my location for distances"}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={locate}
+            className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-dashed border-border px-3 py-2 text-sm text-muted-foreground"
+          >
+            <Crosshair className="size-4" />
+            {locating ? "Finding you…" : "Use my location"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setLocationOpen(true)}
+            className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-dashed border-border px-3 py-2 text-sm text-muted-foreground"
+          >
+            <MapPin className="size-4" />
+            Pick an area
+          </button>
+        </div>
       ) : origin ? (
         <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <Crosshair className="size-3.5" /> Distances from your current location
+          <span className="flex min-w-0 items-center gap-1.5">
+            <Crosshair className="size-3.5 shrink-0" />
+            <span className="truncate">Distances from {origin.label}</span>
           </span>
-          <button type="button" className="underline" onClick={() => setOrigin(null)}>
-            Clear
-          </button>
+          <span className="flex shrink-0 items-center gap-2">
+            <button type="button" className="underline" onClick={() => setLocationOpen(true)}>
+              Change
+            </button>
+            <button type="button" className="underline" onClick={() => setOrigin(null)}>
+              Clear
+            </button>
+          </span>
         </div>
       ) : null}
 
@@ -485,6 +512,17 @@ function PlacesPage() {
         </ul>
       )}
 
+      <LocationDialog
+        open={locationOpen}
+        onOpenChange={setLocationOpen}
+        places={state.places}
+        onPick={(o) => {
+          setOrigin(o);
+          toast.success(`Measuring distances from ${o.label}`);
+        }}
+        onUseDevice={locate}
+        locating={locating}
+      />
       <ImportPlacesDialog open={importOpen} onOpenChange={setImportOpen} />
       <ExportPlacesDialog open={exportOpen} onOpenChange={setExportOpen} />
       <EventDialog
