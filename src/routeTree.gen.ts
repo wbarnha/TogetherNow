@@ -16,6 +16,7 @@ import { Route as MilestonesRouteImport } from './routes/milestones'
 import { Route as MoneyRouteImport } from './routes/money'
 import { Route as MoodRouteImport } from './routes/mood'
 import { Route as PairRouteImport } from './routes/pair'
+import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as PlacesRouteImport } from './routes/places'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TravelRouteImport } from './routes/travel'
@@ -55,6 +56,11 @@ const PairRoute = PairRouteImport.update({
   path: '/pair',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PartnerRoute = PartnerRouteImport.update({
+  id: '/partner',
+  path: '/partner',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PlacesRoute = PlacesRouteImport.update({
   id: '/places',
   path: '/places',
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/money': typeof MoneyRoute
   '/mood': typeof MoodRoute
   '/pair': typeof PairRoute
+  '/partner': typeof PartnerRoute
   '/places': typeof PlacesRoute
   '/settings': typeof SettingsRoute
   '/travel': typeof TravelRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/money': typeof MoneyRoute
   '/mood': typeof MoodRoute
   '/pair': typeof PairRoute
+  '/partner': typeof PartnerRoute
   '/places': typeof PlacesRoute
   '/settings': typeof SettingsRoute
   '/travel': typeof TravelRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/money': typeof MoneyRoute
   '/mood': typeof MoodRoute
   '/pair': typeof PairRoute
+  '/partner': typeof PartnerRoute
   '/places': typeof PlacesRoute
   '/settings': typeof SettingsRoute
   '/travel': typeof TravelRoute
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/money'
     | '/mood'
     | '/pair'
+    | '/partner'
     | '/places'
     | '/settings'
     | '/travel'
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/money'
     | '/mood'
     | '/pair'
+    | '/partner'
     | '/places'
     | '/settings'
     | '/travel'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/money'
     | '/mood'
     | '/pair'
+    | '/partner'
     | '/places'
     | '/settings'
     | '/travel'
@@ -155,6 +167,7 @@ export interface RootRouteChildren {
   MoneyRoute: typeof MoneyRoute
   MoodRoute: typeof MoodRoute
   PairRoute: typeof PairRoute
+  PartnerRoute: typeof PartnerRoute
   PlacesRoute: typeof PlacesRoute
   SettingsRoute: typeof SettingsRoute
   TravelRoute: typeof TravelRoute
@@ -211,6 +224,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PairRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/partner': {
+      id: '/partner'
+      path: '/partner'
+      fullPath: '/partner'
+      preLoaderRoute: typeof PartnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/places': {
       id: '/places'
       path: '/places'
@@ -243,6 +263,7 @@ const rootRouteChildren: RootRouteChildren = {
   MoneyRoute: MoneyRoute,
   MoodRoute: MoodRoute,
   PairRoute: PairRoute,
+  PartnerRoute: PartnerRoute,
   PlacesRoute: PlacesRoute,
   SettingsRoute: SettingsRoute,
   TravelRoute: TravelRoute,
