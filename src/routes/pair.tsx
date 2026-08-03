@@ -194,6 +194,7 @@ function PairPage() {
           </div>
         </TabsContent>
       </Tabs>
+      )}
     </AppShell>
   );
 }
