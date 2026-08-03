@@ -11,6 +11,7 @@ import { useStore } from "@/lib/app/store";
 import { applyShareCode, buildShareCode, parseShareCode } from "@/lib/app/share";
 import { inviteLink, sendInvite } from "@/lib/app/invite";
 import { InviteStatusBanner } from "@/components/app/InviteStatus";
+import { AcceptInvite } from "@/components/app/AcceptInvite";
 
 export const Route = createFileRoute("/pair")({
   head: () => ({
@@ -37,6 +38,7 @@ function PairPage() {
   const [incoming, setIncoming] = useState("");
   const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState("invite");
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
 
   const code = useMemo(() => (hydrated ? buildShareCode(state) : ""), [state, hydrated]);
 
@@ -45,6 +47,7 @@ function PairPage() {
     const fromUrl = new URLSearchParams(window.location.search).get("code");
     if (fromUrl) {
       setIncoming(fromUrl);
+      setInviteCode(fromUrl);
       setTab("receive");
     }
   }, []);
@@ -92,98 +95,110 @@ function PairPage() {
 
   return (
     <AppShell
-      title="Share code"
-      subtitle="Nothing leaves your phone until you hand this over."
+      title={inviteCode ? "Invite" : "Share code"}
+      subtitle={
+        inviteCode
+          ? "Accept to bring your partner's plans onto this phone."
+          : "Nothing leaves your phone until you hand this over."
+      }
       action={
         <Button variant="ghost" size="icon" onClick={() => router.history.back()}>
           <ArrowLeft className="size-5" />
         </Button>
       }
     >
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid w-full grid-cols-3 rounded-2xl">
-          <TabsTrigger value="invite" className="rounded-xl">
-            Invite
-          </TabsTrigger>
-          <TabsTrigger value="send" className="rounded-xl">
-            Send mine
-          </TabsTrigger>
-          <TabsTrigger value="receive" className="rounded-xl">
-            Receive
-          </TabsTrigger>
-        </TabsList>
+      {inviteCode ? (
+        <AcceptInvite code={inviteCode} onDismiss={() => setInviteCode(null)} />
+      ) : (
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="grid w-full grid-cols-3 rounded-2xl">
+            <TabsTrigger value="invite" className="rounded-xl">
+              Invite
+            </TabsTrigger>
+            <TabsTrigger value="send" className="rounded-xl">
+              Send mine
+            </TabsTrigger>
+            <TabsTrigger value="receive" className="rounded-xl">
+              Receive
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="invite" className="mt-4 space-y-4">
-          <InviteStatusBanner state={state} onRetry={invite} />
-          <div className="space-y-4 rounded-3xl border border-border bg-card p-5 text-center">
-            <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Heart className="size-6" />
-            </span>
-            <div>
-              <h2 className="font-display text-xl font-semibold">
-                Invite {state.them.name || "your partner"}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Send them a link. Opening it on their phone connects you two and pulls in your
-                plans, dates and Together list.
+          <TabsContent value="invite" className="mt-4 space-y-4">
+            <InviteStatusBanner state={state} onRetry={invite} />
+            <div className="space-y-4 rounded-3xl border border-border bg-card p-5 text-center">
+              <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Heart className="size-6" />
+              </span>
+              <div>
+                <h2 className="font-display text-xl font-semibold">
+                  Invite {state.them.name || "your partner"}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Send them a link. Opening it on their phone connects you two and pulls in your
+                  plans, dates and Together list.
+                </p>
+              </div>
+              <Button onClick={invite} size="lg" className="w-full">
+                <Send className="size-4" />
+                {state.inviteFailedAt
+                  ? "Retry invite"
+                  : state.inviteSentAt
+                    ? "Send again"
+                    : "Send invite"}
+              </Button>
+              <p className="break-all font-mono text-[11px] text-muted-foreground">
+                {hydrated ? inviteLink(state) : ""}
               </p>
             </div>
-            <Button onClick={invite} size="lg" className="w-full">
-              <Send className="size-4" />
-              {state.inviteFailedAt ? "Retry invite" : state.inviteSentAt ? "Send again" : "Send invite"}
-            </Button>
-            <p className="break-all font-mono text-[11px] text-muted-foreground">
-              {hydrated ? inviteLink(state) : ""}
+            <p className="px-1 text-xs text-muted-foreground">
+              {state.pairedAt
+                ? "Re-send any time to share your latest items."
+                : "Not connected yet — once they open your link (or you merge their code), shared items start flowing both ways."}
             </p>
-          </div>
-          <p className="px-1 text-xs text-muted-foreground">
-            {state.pairedAt
-              ? "Re-send any time to share your latest items."
-              : "Not connected yet — once they open your link (or you merge their code), shared items start flowing both ways."}
-          </p>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="send" className="mt-4 space-y-4">
-          <div className="flex flex-col items-center gap-4 rounded-3xl border border-border bg-card p-5">
-            <QrCode value={code || "TN1:"} />
-            <p className="text-center text-sm text-muted-foreground">
-              Let {state.them.name || "your partner"} scan this with their camera, or send them the
-              text code below.
-            </p>
-            <Button onClick={copy} className="w-full">
-              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-              {copied ? "Copied" : "Copy text code"}
-            </Button>
-          </div>
-          <details className="rounded-3xl border border-border bg-card p-4">
-            <summary className="cursor-pointer text-sm font-medium">Show the raw code</summary>
-            <p className="mt-3 break-all font-mono text-[11px] text-muted-foreground">{code}</p>
-          </details>
-        </TabsContent>
-
-        <TabsContent value="receive" className="mt-4 space-y-4">
-          <div className="space-y-3 rounded-3xl border border-border bg-card p-5">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <QrIcon className="size-4 text-primary" />
-              Paste their code
+          <TabsContent value="send" className="mt-4 space-y-4">
+            <div className="flex flex-col items-center gap-4 rounded-3xl border border-border bg-card p-5">
+              <QrCode value={code || "TN1:"} />
+              <p className="text-center text-sm text-muted-foreground">
+                Let {state.them.name || "your partner"} scan this with their camera, or send them
+                the text code below.
+              </p>
+              <Button onClick={copy} className="w-full">
+                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                {copied ? "Copied" : "Copy text code"}
+              </Button>
             </div>
-            <Textarea
-              value={incoming}
-              onChange={(e) => setIncoming(e.target.value)}
-              rows={5}
-              placeholder="TN1:…"
-              className="font-mono text-xs"
-            />
-            <Button onClick={importCode} disabled={!incoming.trim()} className="w-full">
-              Merge into my app
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              Scanning a QR with your phone camera opens the code as text — copy and paste it here.
-              Merging keeps whichever version of an item was edited most recently.
-            </p>
-          </div>
-        </TabsContent>
-      </Tabs>
+            <details className="rounded-3xl border border-border bg-card p-4">
+              <summary className="cursor-pointer text-sm font-medium">Show the raw code</summary>
+              <p className="mt-3 break-all font-mono text-[11px] text-muted-foreground">{code}</p>
+            </details>
+          </TabsContent>
+
+          <TabsContent value="receive" className="mt-4 space-y-4">
+            <div className="space-y-3 rounded-3xl border border-border bg-card p-5">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <QrIcon className="size-4 text-primary" />
+                Paste their code
+              </div>
+              <Textarea
+                value={incoming}
+                onChange={(e) => setIncoming(e.target.value)}
+                rows={5}
+                placeholder="TN1:…"
+                className="font-mono text-xs"
+              />
+              <Button onClick={importCode} disabled={!incoming.trim()} className="w-full">
+                Merge into my app
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Scanning a QR with your phone camera opens the code as text — copy and paste it
+                here. Merging keeps whichever version of an item was edited most recently.
+              </p>
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
     </AppShell>
   );
 }
