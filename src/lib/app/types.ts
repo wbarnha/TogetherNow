@@ -78,15 +78,6 @@ export type MoodEntry = {
   updatedAt: number;
 };
 
-type LegacyMessengerId =
-  | "imessage"
-  | "facetime"
-  | "discord"
-  | "instagram"
-  | "whatsapp"
-  | "telegram";
-export type { LegacyMessengerId };
-
 export type TravelMode = "flight" | "train" | "bus" | "drive" | "ferry";
 
 /** One researched way of making a trip happen. */
