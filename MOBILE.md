@@ -40,3 +40,39 @@ selected under Signing & Capabilities.
 
 The app also works as an installable web app. Open the published URL on your
 phone and use Share → Add to Home Screen (iOS) or the install prompt (Android).
+## Mood widgets (iOS & Android)
+
+The app writes a small JSON snapshot (both moods, streak, next plan) through
+Capacitor Preferences, so the native widgets read it locally — no backend.
+
+- Key: `togethernow.widget.snapshot`
+  - iOS: App Group `group.app.lovable.togethernow`, UserDefaults key
+    `CapacitorStorage.togethernow.widget.snapshot`
+  - Android: SharedPreferences file `CapacitorStorage`, key
+    `togethernow.widget.snapshot`
+- Widget taps deep-link back with `togethernow://mood?score=1..5`, which the app
+  logs as today's check-in.
+
+### iOS
+1. `npx cap add ios && npx cap sync ios && npx cap open ios`
+2. File > New > Target > **Widget Extension** (name it `TogetherNowWidget`, uncheck Live Activity).
+3. Replace the generated Swift file with `native-widgets/ios/TogetherNowWidget.swift`.
+4. Signing & Capabilities: add **App Groups** → `group.app.lovable.togethernow`
+   to *both* the app target and the widget target.
+5. In `Info.plist` of the app target add a URL scheme `togethernow`.
+
+### Android
+1. `npx cap add android && npx cap sync android && npx cap open android`
+2. Add Glance to `android/app/build.gradle`:
+   `implementation "androidx.glance:glance-appwidget:1.1.1"`
+3. Copy `native-widgets/android/MoodWidget.kt` into
+   `android/app/src/main/java/app/lovable/togethernow/widget/`.
+4. Add a widget info XML (`res/xml/mood_widget_info.xml`) and register the receiver
+   in `AndroidManifest.xml`:
+   ```xml
+   <receiver android:name=".widget.MoodWidgetReceiver" android:exported="true">
+     <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+     <meta-data android:name="android.appwidget.provider" android:resource="@xml/mood_widget_info" />
+   </receiver>
+   ```
+5. Add an intent filter on `MainActivity` for the `togethernow` scheme.
