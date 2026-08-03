@@ -1,0 +1,19 @@
+{
+  "name": "Together Now",
+  "short_name": "Together",
+  "description": "A shared calendar, date countdowns, and one-tap ways to reach each other across time zones.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdf3ec",
+  "theme_color": "#fdf3ec",
+  "icons": [
+    { "src": "/app-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/app-icon-512.png", "sizes": "512x512", "type": "image/png" },
+    {
+      "src": "/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
