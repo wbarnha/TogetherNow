@@ -1,6 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { ArrowLeft, Check, Copy, QrCode as QrIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Check, Copy, Heart, QrCode as QrIcon, Send } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/AppShell";
 import { QrCode } from "@/components/app/QrCode";
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/lib/app/store";
 import { applyShareCode, buildShareCode, parseShareCode } from "@/lib/app/share";
+import { inviteLink, sendInvite } from "@/lib/app/invite";
 
 export const Route = createFileRoute("/pair")({
   head: () => ({
@@ -34,8 +35,25 @@ function PairPage() {
   const { state, setState, hydrated } = useStore();
   const [incoming, setIncoming] = useState("");
   const [copied, setCopied] = useState(false);
+  const [tab, setTab] = useState("invite");
 
   const code = useMemo(() => (hydrated ? buildShareCode(state) : ""), [state, hydrated]);
+
+  // Opening an invite link lands here with their code ready to merge.
+  useEffect(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get("code");
+    if (fromUrl) {
+      setIncoming(fromUrl);
+      setTab("receive");
+    }
+  }, []);
+
+  const invite = async () => {
+    const result = await sendInvite(state);
+    if (result === "shared") toast.success("Invite sent");
+    else if (result === "copied") toast.success("Invite copied — paste it to your partner");
+    else if (result === "failed") toast.error("Couldn't share the invite");
+  };
 
   const copy = async () => {
     try {
@@ -76,15 +94,46 @@ function PairPage() {
         </Button>
       }
     >
-      <Tabs defaultValue="send">
-        <TabsList className="grid w-full grid-cols-2 rounded-2xl">
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="grid w-full grid-cols-3 rounded-2xl">
+          <TabsTrigger value="invite" className="rounded-xl">
+            Invite
+          </TabsTrigger>
           <TabsTrigger value="send" className="rounded-xl">
             Send mine
           </TabsTrigger>
           <TabsTrigger value="receive" className="rounded-xl">
-            Receive theirs
+            Receive
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="invite" className="mt-4 space-y-4">
+          <div className="space-y-4 rounded-3xl border border-border bg-card p-5 text-center">
+            <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Heart className="size-6" />
+            </span>
+            <div>
+              <h2 className="font-display text-xl font-semibold">
+                Invite {state.them.name || "your partner"}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Send them a link. Opening it on their phone connects you two and pulls in your
+                plans, dates and Together list.
+              </p>
+            </div>
+            <Button onClick={invite} size="lg" className="w-full">
+              <Send className="size-4" /> Send invite
+            </Button>
+            <p className="break-all font-mono text-[11px] text-muted-foreground">
+              {hydrated ? inviteLink(state) : ""}
+            </p>
+          </div>
+          <p className="px-1 text-xs text-muted-foreground">
+            {state.pairedAt
+              ? `Connected with ${state.them.name || "your partner"}. Re-send any time to share your latest items.`
+              : "Not connected yet — once they open your link (or you merge their code), shared items start flowing both ways."}
+          </p>
+        </TabsContent>
 
         <TabsContent value="send" className="mt-4 space-y-4">
           <div className="flex flex-col items-center gap-4 rounded-3xl border border-border bg-card p-5">
