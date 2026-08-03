@@ -113,11 +113,11 @@ export type GoalProgress = {
   percent: number;
   monthly: number;
   /** whole months left until the deadline, if set */
-  monthsLeft?: number;
+  monthsLeft?: number | undefined;
   /** what you'd need to put away together each month to make the deadline */
-  neededMonthly?: number;
+  neededMonthly?: number | undefined;
   /** projected completion date at the current monthly plan */
-  projectedDate?: Date;
+  projectedDate?: Date | undefined;
   onTrack: boolean;
 };
 
