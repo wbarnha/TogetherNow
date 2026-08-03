@@ -54,13 +54,14 @@ describe("matching helpers", () => {
   });
 
   it("collapses duplicates on import", () => {
-    const merged = dedupeParsed([
+    const { places, merged } = dedupeParsed([
       { name: "Blue Bottle Coffee", lat: 37.7749, lng: -122.4194 },
       { name: "blue bottle coffee", lat: 37.7749, lng: -122.4194, note: "cortado" },
       { name: "Dolores Park", lat: 37.7596, lng: -122.4269 },
     ]);
-    expect(merged).toHaveLength(2);
-    expect(merged[0]!.note).toBe("cortado");
+    expect(places).toHaveLength(2);
+    expect(merged).toBe(1);
+    expect(places[0]!.note).toBe("cortado");
   });
 });
 
@@ -73,6 +74,7 @@ describe("placeId", () => {
 
 describe("guessCategory", () => {
   it("infers a category from the name", () => {
-    expect(guessCategory({ name: "Blue Bottle Coffee" })).toBe("food");
+    expect(guessCategory({ name: "Blue Bottle Coffee" })).toBe("drinks");
+    expect(guessCategory({ name: "Sushi Ramen House" })).toBe("food");
   });
 });
