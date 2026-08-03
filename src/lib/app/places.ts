@@ -312,3 +312,136 @@ export function mapLink(place: Place) {
   const query = [place.name, place.address].filter(Boolean).join(" ");
   return `https://maps.google.com/?q=${encodeURIComponent(query)}`;
 }
+
+/* --------------------------- deduplication ------------------------------ */
+
+const NOISE_WORDS = new Set([
+  "the", "a", "an", "of", "and", "&", "at", "in", "on",
+  "restaurant", "cafe", "coffee", "bar", "shop", "store", "co", "inc", "llc",
+]);
+
+/** Lowercase, accent-free, punctuation-free comparison form of a place name. */
+export function normalizeName(raw: string | undefined) {
+  return (raw ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function nameTokens(raw: string | undefined) {
+  return normalizeName(raw)
+    .split(" ")
+    .filter((t) => t.length > 1 && !NOISE_WORDS.has(t));
+}
+
+/** 0-1 similarity between two place names (token overlap, containment aware). */
+export function nameSimilarity(a: string | undefined, b: string | undefined) {
+  const na = normalizeName(a);
+  const nb = normalizeName(b);
+  if (!na || !nb) return 0;
+  if (na === nb) return 1;
+  const ta = new Set(nameTokens(a));
+  const tb = new Set(nameTokens(b));
+  if (ta.size === 0 || tb.size === 0) return 0;
+  let shared = 0;
+  for (const t of ta) if (tb.has(t)) shared++;
+  const union = ta.size + tb.size - shared;
+  const jaccard = shared / union;
+  const containment = shared / Math.min(ta.size, tb.size);
+  return Math.max(jaccard, containment * 0.95);
+}
+
+/** Great-circle distance in metres, or null when either point is unknown. */
+export function distanceMeters(
+  a: { lat?: number | undefined; lng?: number | undefined },
+  b: { lat?: number | undefined; lng?: number | undefined },
+) {
+  if (a.lat == null || a.lng == null || b.lat == null || b.lng == null) return null;
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
+}
+
+const COORD_MATCH_METRES = 120;
+const NAME_MATCH_SCORE = 0.72;
+
+type PlaceLike = ParsedPlace | Place;
+
+function normalizedUrl(u: string | undefined) {
+  if (!u) return "";
+  try {
+    const parsed = new URL(u.trim());
+    return `${parsed.hostname.replace(/^www\./, "")}${parsed.pathname.replace(/\/$/, "")}`.toLowerCase();
+  } catch {
+    return u.trim().toLowerCase();
+  }
+}
+
+/** True when two entries almost certainly describe the same real-world place. */
+export function isSamePlace(a: PlaceLike, b: PlaceLike) {
+  const ua = normalizedUrl(a.url);
+  const ub = normalizedUrl(b.url);
+  if (ua && ua === ub) return true;
+
+  const dist = distanceMeters(a, b);
+  const score = nameSimilarity(a.name, b.name);
+
+  if (dist != null) {
+    if (dist <= 25) return true; // same pin, whatever it is called
+    if (dist <= COORD_MATCH_METRES && score >= 0.5) return true;
+    if (dist > COORD_MATCH_METRES) return false; // clearly different locations
+  }
+
+  if (score >= NAME_MATCH_SCORE) {
+    const aa = normalizeName(a.address);
+    const bb = normalizeName(b.address);
+    if (!aa || !bb) return true;
+    return aa === bb || aa.includes(bb) || bb.includes(aa) || nameSimilarity(aa, bb) >= 0.6;
+  }
+  return false;
+}
+
+function longer(a: string | undefined, b: string | undefined) {
+  const av = a?.trim() ?? "";
+  const bv = b?.trim() ?? "";
+  return (av.length >= bv.length ? av : bv) || undefined;
+}
+
+/** Combine two duplicates, keeping the richest field from each. */
+export function mergeParsed(a: ParsedPlace, b: ParsedPlace): ParsedPlace {
+  return {
+    name: longer(a.name, b.name) ?? a.name,
+    address: longer(a.address, b.address),
+    note: longer(a.note, b.note),
+    url: a.url ?? b.url,
+    lat: a.lat ?? b.lat,
+    lng: a.lng ?? b.lng,
+  };
+}
+
+/** Collapse duplicates inside a freshly parsed list. */
+export function dedupeParsed(list: ParsedPlace[]) {
+  const out: ParsedPlace[] = [];
+  let merged = 0;
+  for (const p of list) {
+    const i = out.findIndex((x) => isSamePlace(x, p));
+    if (i >= 0) {
+      out[i] = mergeParsed(out[i]!, p);
+      merged++;
+    } else out.push(p);
+  }
+  return { places: out, merged };
+}
+
+/** Find an already-saved idea that matches a parsed place. */
+export function findExistingPlace(p: ParsedPlace, existing: Place[]) {
+  return existing.find((x) => x.id === placeId(p) || isSamePlace(x, p));
+}

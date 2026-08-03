@@ -12,7 +12,14 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { parsePlaces, placeId, toPlace, type ParsedPlace } from "@/lib/app/places";
+import {
+  dedupeParsed,
+  findExistingPlace,
+  parsePlaces,
+  placeId,
+  toPlace,
+  type ParsedPlace,
+} from "@/lib/app/places";
 import { useStore } from "@/lib/app/store";
 import type { Owner, Place } from "@/lib/app/types";
 import { cn } from "@/lib/utils";
@@ -45,35 +52,55 @@ export function ImportPlacesDialog({
   const [owner, setOwner] = useState<Owner>("us");
   const [source, setSource] = useState<Place["source"]>("google");
 
-  const places = useMemo(() => {
-    if (!raw) return [] as ParsedPlace[];
-    let parsed: ParsedPlace[] = [];
+  const parsedResult = useMemo(() => {
+    if (!raw) return { places: [] as ParsedPlace[], merged: 0 };
     try {
-      parsed = parsePlaces(raw, fileName);
+      return dedupeParsed(parsePlaces(raw, fileName));
     } catch {
-      parsed = [];
+      return { places: [] as ParsedPlace[], merged: 0 };
     }
-    const seen = new Set<string>();
-    return parsed.filter((p) => {
-      const id = placeId(p);
-      if (seen.has(id)) return false;
-      seen.add(id);
-      return true;
-    });
   }, [raw, fileName]);
+
+  const places = parsedResult.places;
+
+  /** Ideas already on the list, matched by link, coordinates or name. */
+  const existingMatches = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of places) {
+      const hit = findExistingPlace(p, state.places);
+      if (hit) map.set(placeId(p), hit.id);
+    }
+    return map;
+  }, [places, state.places]);
+
+  const freshIds = useMemo(
+    () => places.map(placeId).filter((id) => !existingMatches.has(id)),
+    [places, existingMatches],
+  );
 
   const load = (text: string, name?: string) => {
     setRaw(text);
     setFileName(name);
-    const parsed = (() => {
+    const result = (() => {
       try {
-        return parsePlaces(text, name);
+        return dedupeParsed(parsePlaces(text, name));
       } catch {
-        return [] as ParsedPlace[];
+        return { places: [] as ParsedPlace[], merged: 0 };
       }
     })();
-    setSelected(new Set(parsed.map(placeId)));
-    if (parsed.length === 0) toast.error("No places found in that file");
+    setSelected(
+      new Set(
+        result.places
+          .filter((p) => !findExistingPlace(p, state.places))
+          .map(placeId),
+      ),
+    );
+    if (result.places.length === 0) toast.error("No places found in that file");
+    else if (result.merged > 0) {
+      toast.success(
+        `Merged ${result.merged} duplicate ${result.merged === 1 ? "entry" : "entries"}`,
+      );
+    }
     if (name && /apple|vcf/i.test(name)) setSource("apple");
   };
 
@@ -87,17 +114,36 @@ export function ImportPlacesDialog({
   const add = () => {
     const chosen = places.filter((p) => selected.has(placeId(p)));
     if (chosen.length === 0) return;
+    let updated = 0;
     setState((prev) => {
       const next = [...prev.places];
       for (const p of chosen) {
         const place = toPlace(p, owner, source);
-        const i = next.findIndex((x) => x.id === place.id);
-        if (i >= 0) next[i] = { ...next[i]!, ...place, visited: next[i]!.visited };
-        else next.push(place);
+        const matchId = existingMatches.get(placeId(p));
+        const i = next.findIndex((x) => x.id === (matchId ?? place.id));
+        if (i >= 0) {
+          const current = next[i]!;
+          updated++;
+          next[i] = {
+            ...current,
+            name: current.name || place.name,
+            address: current.address ?? place.address,
+            note: current.note ?? place.note,
+            url: current.url ?? place.url,
+            lat: current.lat ?? place.lat,
+            lng: current.lng ?? place.lng,
+            updatedAt: Date.now(),
+          };
+        } else next.push(place);
       }
       return { ...prev, places: next };
     });
-    toast.success(`${chosen.length} date ${chosen.length === 1 ? "idea" : "ideas"} added`);
+    const added = chosen.length - updated;
+    toast.success(
+      added > 0
+        ? `${added} date ${added === 1 ? "idea" : "ideas"} added${updated ? `, ${updated} merged` : ""}`
+        : `${updated} existing ${updated === 1 ? "idea" : "ideas"} updated`,
+    );
     reset();
     onOpenChange(false);
   };
@@ -209,25 +255,27 @@ export function ImportPlacesDialog({
               <div className="flex items-center justify-between">
                 <Label>
                   {places.length} found · {selected.size} selected
+                  {existingMatches.size > 0
+                    ? ` · ${existingMatches.size} already saved`
+                    : ""}
                 </Label>
                 <button
                   type="button"
                   className="text-xs text-primary underline-offset-2 hover:underline"
                   onClick={() =>
                     setSelected(
-                      selected.size === places.length
-                        ? new Set()
-                        : new Set(places.map(placeId)),
+                      selected.size > 0 ? new Set() : new Set(freshIds),
                     )
                   }
                 >
-                  {selected.size === places.length ? "Clear all" : "Select all"}
+                  {selected.size > 0 ? "Clear all" : "Select new"}
                 </button>
               </div>
               <ul className="max-h-64 space-y-2 overflow-y-auto rounded-2xl border border-border p-2">
                 {places.map((p) => {
                   const id = placeId(p);
                   const checked = selected.has(id);
+                  const duplicate = existingMatches.has(id);
                   return (
                     <li key={id}>
                       <label className="flex items-start gap-3 rounded-xl p-2 hover:bg-muted/60">
@@ -243,7 +291,16 @@ export function ImportPlacesDialog({
                           }
                         />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium">{p.name}</span>
+                          <span className="flex items-center gap-2">
+                            <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                              {p.name}
+                            </span>
+                            {duplicate ? (
+                              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                                Already saved
+                              </span>
+                            ) : null}
+                          </span>
                           {p.address || p.note ? (
                             <span className="block truncate text-xs text-muted-foreground">
                               {p.address ?? p.note}
