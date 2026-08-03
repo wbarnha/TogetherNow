@@ -19,6 +19,7 @@ import { Route as PairRouteImport } from './routes/pair'
 import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as PlacesRouteImport } from './routes/places'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SyncRouteImport } from './routes/sync'
 import { Route as TravelRouteImport } from './routes/travel'
 
 const IndexRoute = IndexRouteImport.update({
@@ -71,6 +72,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SyncRoute = SyncRouteImport.update({
+  id: '/sync',
+  path: '/sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TravelRoute = TravelRouteImport.update({
   id: '/travel',
   path: '/travel',
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/partner': typeof PartnerRoute
   '/places': typeof PlacesRoute
   '/settings': typeof SettingsRoute
+  '/sync': typeof SyncRoute
   '/travel': typeof TravelRoute
 }
 export interface FileRoutesByTo {
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/partner': typeof PartnerRoute
   '/places': typeof PlacesRoute
   '/settings': typeof SettingsRoute
+  '/sync': typeof SyncRoute
   '/travel': typeof TravelRoute
 }
 export interface FileRoutesById {
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   '/partner': typeof PartnerRoute
   '/places': typeof PlacesRoute
   '/settings': typeof SettingsRoute
+  '/sync': typeof SyncRoute
   '/travel': typeof TravelRoute
 }
 export interface FileRouteTypes {
@@ -130,6 +139,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/places'
     | '/settings'
+    | '/sync'
     | '/travel'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -143,6 +153,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/places'
     | '/settings'
+    | '/sync'
     | '/travel'
   id:
     | '__root__'
@@ -156,6 +167,7 @@ export interface FileRouteTypes {
     | '/partner'
     | '/places'
     | '/settings'
+    | '/sync'
     | '/travel'
   fileRoutesById: FileRoutesById
 }
@@ -170,6 +182,7 @@ export interface RootRouteChildren {
   PartnerRoute: typeof PartnerRoute
   PlacesRoute: typeof PlacesRoute
   SettingsRoute: typeof SettingsRoute
+  SyncRoute: typeof SyncRoute
   TravelRoute: typeof TravelRoute
 }
 
@@ -245,6 +258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sync': {
+      id: '/sync'
+      path: '/sync'
+      fullPath: '/sync'
+      preLoaderRoute: typeof SyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/travel': {
       id: '/travel'
       path: '/travel'
@@ -266,6 +286,7 @@ const rootRouteChildren: RootRouteChildren = {
   PartnerRoute: PartnerRoute,
   PlacesRoute: PlacesRoute,
   SettingsRoute: SettingsRoute,
+  SyncRoute: SyncRoute,
   TravelRoute: TravelRoute,
 }
 export const routeTree = rootRouteImport

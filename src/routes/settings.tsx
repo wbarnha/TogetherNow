@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { QrCode, RotateCcw, Moon, Sun, Users } from "lucide-react";
+import { QrCode, RotateCcw, Moon, Sun, Users, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
@@ -166,6 +166,11 @@ function SettingsPage() {
         <Button asChild variant="outline" className="w-full">
           <Link to="/partner">
             <Users className="size-4" /> Partner &amp; sharing controls
+          </Link>
+        </Button>
+        <Button asChild variant="outline" className="w-full">
+          <Link to="/sync">
+            <RefreshCw className="size-4" /> Calendar sync status
           </Link>
         </Button>
         <Button asChild variant="outline" className="w-full">

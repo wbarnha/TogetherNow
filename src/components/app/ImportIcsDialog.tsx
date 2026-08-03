@@ -15,9 +15,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { parseIcs, toPlanEvent, type ParsedIcsEvent } from "@/lib/app/ics";
 import { icsEventId } from "@/lib/app/ics";
-import { useStore } from "@/lib/app/store";
+import { newId, useStore } from "@/lib/app/store";
 import { zoneLabel } from "@/lib/app/time";
-import type { Owner } from "@/lib/app/types";
+import type { CalendarSource, Owner } from "@/lib/app/types";
 import { cn } from "@/lib/utils";
 
 const OWNERS: { value: Owner; label: (me: string, them: string) => string }[] = [
@@ -40,6 +40,8 @@ export function ImportIcsDialog({
   const [anchor, setAnchor] = useState<"me" | "them">("me");
   const [owner, setOwner] = useState<Owner>("us");
   const [pasted, setPasted] = useState("");
+  const [sourceLabel, setSourceLabel] = useState("Pasted calendar");
+  const [sourceKind, setSourceKind] = useState<CalendarSource["kind"]>("ics-paste");
 
   const zone = anchor === "me" ? state.me.timeZone : state.them.timeZone;
 
@@ -79,12 +81,14 @@ export function ImportIcsDialog({
     }
     setRaw(text);
     setSelected(new Set(parseIcs(text, zone).map(icsEventId)));
+    setSourceLabel(label);
     toast.success(`Found ${count} event${count === 1 ? "" : "s"} in ${label}`);
   };
 
   const onFile = async (file: File | undefined) => {
     if (!file) return;
     const text = await file.text();
+    setSourceKind("ics-file");
     load(text, file.name);
   };
 
@@ -108,7 +112,24 @@ export function ImportIcsDialog({
     setState((prev) => {
       const map = new Map(prev.events.map((e) => [e.id, e]));
       for (const e of incoming) map.set(e.id, e);
-      return { ...prev, events: [...map.values()] };
+      const sources = prev.calendarSources ?? [];
+      const existing = sources.find((s) => s.label === sourceLabel && s.owner === owner);
+      const entry: CalendarSource = {
+        id: existing?.id ?? newId(),
+        label: sourceLabel,
+        kind: sourceKind,
+        owner,
+        anchor,
+        eventCount: incoming.length,
+        lastImportAt: Date.now(),
+      };
+      return {
+        ...prev,
+        events: [...map.values()],
+        calendarSources: existing
+          ? sources.map((s) => (s.id === entry.id ? entry : s))
+          : [...sources, entry],
+      };
     });
     toast.success(`Added ${incoming.length} event${incoming.length === 1 ? "" : "s"}`);
     close();

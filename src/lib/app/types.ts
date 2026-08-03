@@ -170,6 +170,20 @@ export type SharingPrefs = {
   money: boolean;
 };
 
+/** A calendar file that was imported into the shared calendar. */
+export type CalendarSource = {
+  id: string;
+  /** file name or "Pasted calendar" */
+  label: string;
+  kind: "ics-file" | "ics-paste";
+  /** whose calendar this is */
+  owner: Owner;
+  /** whose clock the imported times were on */
+  anchor: "me" | "them";
+  eventCount: number;
+  lastImportAt: number;
+};
+
 export type AppState = {
   version: 1;
   onboarded: boolean;
@@ -193,6 +207,12 @@ export type AppState = {
   reminderLeadDays: number;
   theme: "light" | "dark";
   sharing: SharingPrefs;
+  /** calendars imported on this device */
+  calendarSources: CalendarSource[];
+  /** last time a code of mine was handed over */
+  lastSharedAt: number | null;
+  /** last time a code from them was merged in */
+  lastReceivedAt: number | null;
 };
 
 export const emptyProfile = (name = ""): Profile => ({
@@ -221,4 +241,7 @@ export const initialState = (): AppState => ({
   reminderLeadDays: 3,
   theme: "light",
   sharing: { plans: true, dates: true, ideas: true, moods: true, money: true },
+  calendarSources: [],
+  lastSharedAt: null,
+  lastReceivedAt: null,
 });
