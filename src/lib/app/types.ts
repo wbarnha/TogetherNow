@@ -199,6 +199,8 @@ export const initialState = (): AppState => ({
   them: { ...emptyProfile(), timeZone: "Europe/London" },
   startDate: null,
   pairedAt: null,
+  inviteSentAt: null,
+  inviteFailedAt: null,
   events: [],
   milestones: [],
   places: [],
