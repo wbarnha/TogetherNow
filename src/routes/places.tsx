@@ -8,7 +8,7 @@ import {
   Crosshair,
   ExternalLink,
   List,
-  Map,
+  Map as MapIcon,
   MapPin,
   Search,
   Share2,
