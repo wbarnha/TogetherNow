@@ -70,7 +70,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       if (raw) {
         const parsed = JSON.parse(raw) as AppState;
         if (parsed && parsed.version === 1) {
-          setInternal({ ...initialState(), ...parsed });
+          const base = initialState();
+          setInternal({
+            ...base,
+            ...parsed,
+            sharing: { ...base.sharing, ...(parsed.sharing ?? {}) },
+          });
         }
       }
     } catch {
