@@ -35,8 +35,7 @@ export function ImportIcsDialog({
 }) {
   const { state, setState } = useStore();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [parsed, setParsed] = useState<ParsedIcsEvent[] | null>(null);
-  const [skipped, setSkipped] = useState(0);
+  const [raw, setRaw] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [anchor, setAnchor] = useState<"me" | "them">("me");
   const [owner, setOwner] = useState<Owner>("us");
@@ -44,16 +43,14 @@ export function ImportIcsDialog({
 
   const zone = anchor === "me" ? state.me.timeZone : state.them.timeZone;
 
-  const load = (raw: string, label: string) => {
+  // Re-read whenever the anchor zone changes so displayed times stay truthful.
+  const result = useMemo(() => {
+    if (!raw) return null;
     let events: ParsedIcsEvent[] = [];
     try {
-      events = parseIcs(raw, state.me.timeZone);
+      events = parseIcs(raw, zone);
     } catch {
       events = [];
-    }
-    if (events.length === 0) {
-      toast.error("No events found in that calendar file");
-      return;
     }
     // Dedupe by stable id within the file itself (repeating series exports).
     const seen = new Set<string>();
@@ -63,10 +60,26 @@ export function ImportIcsDialog({
       seen.add(id);
       return true;
     });
-    setParsed(unique);
-    setSkipped(events.length - unique.length);
-    setSelected(new Set(unique.map(icsEventId)));
-    toast.success(`Found ${unique.length} event${unique.length === 1 ? "" : "s"} in ${label}`);
+    return { events: unique, skipped: events.length - unique.length };
+  }, [raw, zone]);
+
+  const parsed = result?.events ?? null;
+  const skipped = result?.skipped ?? 0;
+
+  const load = (text: string, label: string) => {
+    let count = 0;
+    try {
+      count = parseIcs(text, zone).length;
+    } catch {
+      count = 0;
+    }
+    if (count === 0) {
+      toast.error("No events found in that calendar file");
+      return;
+    }
+    setRaw(text);
+    setSelected(new Set(parseIcs(text, zone).map(icsEventId)));
+    toast.success(`Found ${count} event${count === 1 ? "" : "s"} in ${label}`);
   };
 
   const onFile = async (file: File | undefined) => {
@@ -78,9 +91,8 @@ export function ImportIcsDialog({
   const close = () => {
     onOpenChange(false);
     setTimeout(() => {
-      setParsed(null);
+      setRaw(null);
       setPasted("");
-      setSkipped(0);
       setSelected(new Set());
     }, 200);
   };
