@@ -95,14 +95,21 @@ function PairPage() {
 
   return (
     <AppShell
-      title="Share code"
-      subtitle="Nothing leaves your phone until you hand this over."
+      title={inviteCode ? "Invite" : "Share code"}
+      subtitle={
+        inviteCode
+          ? "Accept to bring your partner's plans onto this phone."
+          : "Nothing leaves your phone until you hand this over."
+      }
       action={
         <Button variant="ghost" size="icon" onClick={() => router.history.back()}>
           <ArrowLeft className="size-5" />
         </Button>
       }
     >
+      {inviteCode ? (
+        <AcceptInvite code={inviteCode} onDismiss={() => setInviteCode(null)} />
+      ) : (
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid w-full grid-cols-3 rounded-2xl">
           <TabsTrigger value="invite" className="rounded-xl">
