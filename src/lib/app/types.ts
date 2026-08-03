@@ -6,10 +6,10 @@ export type PlanEvent = {
   /** ISO date, yyyy-MM-dd */
   date: string;
   /** HH:mm in the anchor person's zone, optional */
-  time?: string;
+  time?: string | undefined;
   /** whose local time the `time` field is expressed in */
   anchor: "me" | "them";
-  notes?: string;
+  notes?: string | undefined;
   owner: Owner;
   updatedAt: number;
 };
