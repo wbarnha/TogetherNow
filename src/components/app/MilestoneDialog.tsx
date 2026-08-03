@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Trash2 } from "lucide-react";
 import { newId, useStore } from "@/lib/app/store";
 import { toISODate } from "@/lib/app/time";
+import { defaultLeads } from "@/lib/app/milestone-reminders";
 import type { Milestone, MilestoneKind, Owner } from "@/lib/app/types";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,14 @@ const KINDS: { value: MilestoneKind; label: string }[] = [
   { value: "first-met", label: "First met" },
   { value: "custom", label: "Something else" },
 ];
+
+const LEAD_CHOICES = [30, 14, 7, 3, 1, 0];
+
+function leadLabel(n: number) {
+  if (n === 0) return "On the day";
+  if (n === 1) return "1 day before";
+  return `${n} days before`;
+}
 
 export function MilestoneDialog({
   open,
@@ -38,6 +47,8 @@ export function MilestoneDialog({
   const [date, setDate] = useState(toISODate(new Date()));
   const [recurring, setRecurring] = useState(true);
   const [owner, setOwner] = useState<Owner>("us");
+  const [remindersOn, setRemindersOn] = useState(true);
+  const [leads, setLeads] = useState<number[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -46,7 +57,14 @@ export function MilestoneDialog({
     setDate(editing?.date ?? toISODate(new Date()));
     setRecurring(editing?.recurring ?? true);
     setOwner(editing?.owner ?? "us");
-  }, [open, editing]);
+    setRemindersOn(!editing?.remindersOff);
+    setLeads(editing?.reminders ?? defaultLeads(state.reminderLeadDays));
+  }, [open, editing, state.reminderLeadDays]);
+
+  const toggleLead = (n: number) =>
+    setLeads((prev) =>
+      prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n].sort((a, b) => b - a),
+    );
 
   const save = () => {
     if (!title.trim()) return;
@@ -57,6 +75,8 @@ export function MilestoneDialog({
       date,
       recurring,
       owner,
+      reminders: leads.length ? [...leads].sort((a, b) => b - a) : [0],
+      remindersOff: !remindersOn,
     });
     onOpenChange(false);
   };
@@ -120,6 +140,38 @@ export function MilestoneDialog({
               </p>
             </div>
             <Switch checked={recurring} onCheckedChange={setRecurring} />
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-border bg-card px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Remind me</p>
+                <p className="text-xs text-muted-foreground">
+                  Notifications land at {String(state.reminderHour ?? 9).padStart(2, "0")}:00 your
+                  time
+                </p>
+              </div>
+              <Switch checked={remindersOn} onCheckedChange={setRemindersOn} />
+            </div>
+            {remindersOn ? (
+              <div className="flex flex-wrap gap-2">
+                {LEAD_CHOICES.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => toggleLead(n)}
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-xs transition-colors",
+                      leads.includes(n)
+                        ? "border-primary/40 bg-primary/10 text-primary"
+                        : "border-border bg-background text-muted-foreground",
+                    )}
+                  >
+                    {leadLabel(n)}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-2">

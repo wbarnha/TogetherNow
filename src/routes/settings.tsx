@@ -151,6 +151,24 @@ function SettingsPage() {
             Reminders are scheduled on this device when the app runs on your phone.
           </p>
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="reminder-hour">Reminder time</Label>
+          <Input
+            id="reminder-hour"
+            type="time"
+            step={3600}
+            value={`${String(Math.max(0, Math.min(23, state.reminderHour ?? 9))).padStart(2, "0")}:00`}
+            onChange={(e) =>
+              setState((p) => ({
+                ...p,
+                reminderHour: Math.max(0, Math.min(23, Number(e.target.value.split(":")[0]) || 0)),
+              }))
+            }
+          />
+          <p className="text-xs text-muted-foreground">
+            Birthday and anniversary nudges arrive at this hour, your local time.
+          </p>
+        </div>
         <Button
           variant="outline"
           className="w-full"
