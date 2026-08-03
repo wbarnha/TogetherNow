@@ -7,9 +7,9 @@ import { ImportPlacesDialog } from "@/components/app/ImportPlacesDialog";
 import { OwnerBadge } from "@/components/app/OwnerBadge";
 import { Button } from "@/components/ui/button";
 import { mapLink } from "@/lib/app/places";
-import { newId, useStore } from "@/lib/app/store";
+import { useStore } from "@/lib/app/store";
 import { toISODate } from "@/lib/app/time";
-import type { Place, PlanEvent } from "@/lib/app/types";
+import type { Place } from "@/lib/app/types";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/places")({
@@ -40,7 +40,7 @@ function PlacesPage() {
   const { state, upsertPlace, removePlace } = useStore();
   const [importOpen, setImportOpen] = useState(false);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["value"]>("want");
-  const [planning, setPlanning] = useState<PlanEvent | null>(null);
+  const [planning, setPlanning] = useState<Place | null>(null);
 
   const places = useMemo(
     () =>
@@ -49,18 +49,6 @@ function PlacesPage() {
         .sort((a, b) => b.updatedAt - a.updatedAt),
     [state.places, filter],
   );
-
-  const planIt = (place: Place) => {
-    setPlanning({
-      id: newId(),
-      title: place.name,
-      date: toISODate(new Date()),
-      anchor: "me",
-      owner: place.owner,
-      notes: [place.address, place.url].filter(Boolean).join("\n") || undefined,
-      updatedAt: Date.now(),
-    });
-  };
 
   return (
     <AppShell
@@ -141,7 +129,7 @@ function PlacesPage() {
                   size="sm"
                   variant="outline"
                   className="rounded-2xl"
-                  onClick={() => planIt(place)}
+                  onClick={() => setPlanning(place)}
                 >
                   <CalendarPlus className="mr-1.5 size-4" />
                   Plan it
@@ -182,7 +170,10 @@ function PlacesPage() {
         onOpenChange={(v) => {
           if (!v) setPlanning(null);
         }}
-        editing={planning}
+        defaultDate={toISODate(new Date())}
+        defaultTitle={planning?.name ?? ""}
+        defaultNotes={[planning?.address, planning?.url].filter(Boolean).join("\n")}
+        defaultOwner={planning?.owner ?? "us"}
       />
     </AppShell>
   );

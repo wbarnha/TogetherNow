@@ -27,11 +27,17 @@ export function EventDialog({
   onOpenChange,
   editing,
   defaultDate,
+  defaultTitle,
+  defaultNotes,
+  defaultOwner,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editing?: PlanEvent | null;
   defaultDate?: string;
+  defaultTitle?: string;
+  defaultNotes?: string;
+  defaultOwner?: Owner;
 }) {
   const { state, upsertEvent, removeEvent } = useStore();
   const [title, setTitle] = useState("");
@@ -43,13 +49,13 @@ export function EventDialog({
 
   useEffect(() => {
     if (!open) return;
-    setTitle(editing?.title ?? "");
+    setTitle(editing?.title ?? defaultTitle ?? "");
     setDate(editing?.date ?? defaultDate ?? toISODate(new Date()));
     setTime(editing?.time ?? "19:00");
     setAnchor(editing?.anchor ?? "me");
-    setOwner(editing?.owner ?? "us");
-    setNotes(editing?.notes ?? "");
-  }, [open, editing, defaultDate]);
+    setOwner(editing?.owner ?? defaultOwner ?? "us");
+    setNotes(editing?.notes ?? defaultNotes ?? "");
+  }, [open, editing, defaultDate, defaultTitle, defaultNotes, defaultOwner]);
 
   const fromZone = anchor === "me" ? state.me.timeZone : state.them.timeZone;
   const toZone = anchor === "me" ? state.them.timeZone : state.me.timeZone;

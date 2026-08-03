@@ -14,6 +14,7 @@ import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as MilestonesRouteImport } from './routes/milestones'
 import { Route as PairRouteImport } from './routes/pair'
+import { Route as PlacesRouteImport } from './routes/places'
 import { Route as SettingsRouteImport } from './routes/settings'
 
 const IndexRoute = IndexRouteImport.update({
@@ -41,6 +42,11 @@ const PairRoute = PairRouteImport.update({
   path: '/pair',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlacesRoute = PlacesRouteImport.update({
+  id: '/places',
+  path: '/places',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/messages': typeof MessagesRoute
   '/milestones': typeof MilestonesRoute
   '/pair': typeof PairRoute
+  '/places': typeof PlacesRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/messages': typeof MessagesRoute
   '/milestones': typeof MilestonesRoute
   '/pair': typeof PairRoute
+  '/places': typeof PlacesRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRoutesById {
@@ -70,14 +78,28 @@ export interface FileRoutesById {
   '/messages': typeof MessagesRoute
   '/milestones': typeof MilestonesRoute
   '/pair': typeof PairRoute
+  '/places': typeof PlacesRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/calendar' | '/messages' | '/milestones' | '/pair' | '/settings'
+    | '/'
+    | '/calendar'
+    | '/messages'
+    | '/milestones'
+    | '/pair'
+    | '/places'
+    | '/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/calendar' | '/messages' | '/milestones' | '/pair' | '/settings'
+  to:
+    | '/'
+    | '/calendar'
+    | '/messages'
+    | '/milestones'
+    | '/pair'
+    | '/places'
+    | '/settings'
   id:
     | '__root__'
     | '/'
@@ -85,6 +107,7 @@ export interface FileRouteTypes {
     | '/messages'
     | '/milestones'
     | '/pair'
+    | '/places'
     | '/settings'
   fileRoutesById: FileRoutesById
 }
@@ -94,6 +117,7 @@ export interface RootRouteChildren {
   MessagesRoute: typeof MessagesRoute
   MilestonesRoute: typeof MilestonesRoute
   PairRoute: typeof PairRoute
+  PlacesRoute: typeof PlacesRoute
   SettingsRoute: typeof SettingsRoute
 }
 
@@ -134,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PairRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/places': {
+      id: '/places'
+      path: '/places'
+      fullPath: '/places'
+      preLoaderRoute: typeof PlacesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -150,8 +181,19 @@ const rootRouteChildren: RootRouteChildren = {
   MessagesRoute: MessagesRoute,
   MilestonesRoute: MilestonesRoute,
   PairRoute: PairRoute,
+  PlacesRoute: PlacesRoute,
   SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
