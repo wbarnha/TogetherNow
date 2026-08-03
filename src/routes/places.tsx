@@ -102,6 +102,42 @@ function PlacesPage() {
   const [planning, setPlanning] = useState<Place | null>(null);
   const [editingEvent, setEditingEvent] = useState<PlanEvent | null>(null);
   const [view, setView] = useState<"list" | "map">("list");
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState<PlaceCategory | "all">("all");
+  const [sort, setSort] = useState<(typeof SORTS)[number]["value"]>("recent");
+  const [radius, setRadius] = useState<(typeof RADII)[number]["value"]>("any");
+  const [origin, setOrigin] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+
+  const locate = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      toast.error("Your device can't share a location");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setOrigin({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocating(false);
+        toast.success("Using your current location");
+      },
+      () => {
+        setLocating(false);
+        toast.error("Couldn't get your location — check location permissions");
+      },
+      { timeout: 10_000 },
+    );
+  };
+
+  /** Category counts across everything saved, so chips show what actually exists. */
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<PlaceCategory, number>();
+    for (const p of state.places) {
+      const c = placeCategory(p);
+      counts.set(c, (counts.get(c) ?? 0) + 1);
+    }
+    return counts;
+  }, [state.places]);
 
   /** One tap: drop the idea straight onto the shared calendar as a plan for both of us. */
   const planTogether = (place: Place) => {
@@ -129,18 +165,45 @@ function PlacesPage() {
     });
   };
 
-  const places = useMemo(
-    () =>
-      state.places
-        .filter((p) => (filter === "been" ? p.visited : !p.visited))
-        .sort((a, b) => b.updatedAt - a.updatedAt),
-    [state.places, filter],
-  );
+  const places = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const max = radius === "any" ? null : Number(radius);
+    const rows = state.places
+      .filter((p) => (filter === "all" ? true : filter === "been" ? p.visited : !p.visited))
+      .filter((p) => (category === "all" ? true : placeCategory(p) === category))
+      .filter((p) =>
+        q ? [p.name, p.address, p.note].some((f) => f?.toLowerCase().includes(q)) : true,
+      )
+      .map((p) => ({
+        place: p,
+        distance:
+          origin && p.lat != null && p.lng != null
+            ? distanceMeters(origin, { lat: p.lat, lng: p.lng })
+            : null,
+      }))
+      .filter(({ distance }) => (max == null ? true : distance != null && distance <= max));
+
+    rows.sort((a, b) => {
+      if (sort === "name") return a.place.name.localeCompare(b.place.name);
+      if (sort === "distance") {
+        if (a.distance == null) return b.distance == null ? 0 : 1;
+        if (b.distance == null) return -1;
+        return a.distance - b.distance;
+      }
+      return b.place.updatedAt - a.place.updatedAt;
+    });
+    return rows;
+  }, [state.places, filter, category, query, sort, radius, origin]);
 
   const mapped = useMemo(
-    () => places.filter((p): p is MappablePlace => p.lat != null && p.lng != null),
+    () =>
+      places
+        .map(({ place }) => place)
+        .filter((p): p is MappablePlace => p.lat != null && p.lng != null),
     [places],
   );
+
+  const needsLocation = (sort === "distance" || radius !== "any") && !origin;
 
   return (
     <AppShell
