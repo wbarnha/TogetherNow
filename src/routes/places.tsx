@@ -1,7 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { ClientOnly } from "@tanstack/react-router";
-import { CalendarHeart, CalendarPlus, Check, ExternalLink, List, Map, MapPin, Share2, Trash2, Upload } from "lucide-react";
+import {
+  CalendarHeart,
+  CalendarPlus,
+  Check,
+  Crosshair,
+  ExternalLink,
+  List,
+  Map,
+  MapPin,
+  Search,
+  Share2,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/AppShell";
 import { EventDialog } from "@/components/app/EventDialog";
@@ -9,10 +23,25 @@ import { ExportPlacesDialog } from "@/components/app/ExportPlacesDialog";
 import { ImportPlacesDialog } from "@/components/app/ImportPlacesDialog";
 import { OwnerBadge } from "@/components/app/OwnerBadge";
 import { Button } from "@/components/ui/button";
-import { mapLink } from "@/lib/app/places";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  categoryLabel,
+  distanceMeters,
+  formatDistance,
+  mapLink,
+  placeCategory,
+  PLACE_CATEGORIES,
+} from "@/lib/app/places";
 import { newId, useStore } from "@/lib/app/store";
 import { toISODate } from "@/lib/app/time";
-import type { Place, PlanEvent } from "@/lib/app/types";
+import type { Place, PlaceCategory, PlanEvent } from "@/lib/app/types";
 import { cn } from "@/lib/utils";
 import type { MappablePlace } from "@/components/app/PlacesMap";
 
@@ -39,8 +68,22 @@ export const Route = createFileRoute("/places")({
 });
 
 const FILTERS = [
+  { value: "all", label: "All" },
   { value: "want", label: "Want to go" },
   { value: "been", label: "Been" },
+] as const;
+
+const RADII = [
+  { value: "any", label: "Any distance" },
+  { value: "5000", label: "Within 5 km" },
+  { value: "25000", label: "Within 25 km" },
+  { value: "100000", label: "Within 100 km" },
+] as const;
+
+const SORTS = [
+  { value: "recent", label: "Recently added" },
+  { value: "name", label: "Name A–Z" },
+  { value: "distance", label: "Closest to me" },
 ] as const;
 
 /** Next Friday from today (today counts if it is already Friday). */
