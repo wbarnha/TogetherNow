@@ -70,6 +70,7 @@ function PlacesPage() {
       anchor: "me",
       owner: "us",
       notes: [place.address, place.url].filter(Boolean).join("\n") || undefined,
+      updatedAt: Date.now(),
     };
     upsertEvent(event);
     toast.success(`${place.name} is on your shared calendar`, {
