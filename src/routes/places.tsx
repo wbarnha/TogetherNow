@@ -243,6 +243,7 @@ function PlacesPage() {
       )}
 
       <ImportPlacesDialog open={importOpen} onOpenChange={setImportOpen} />
+      <ExportPlacesDialog open={exportOpen} onOpenChange={setExportOpen} />
       <EventDialog
         open={planning !== null}
         onOpenChange={(v) => {
