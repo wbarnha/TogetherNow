@@ -123,12 +123,13 @@ export function parsePlacesGeoJson(text: string): ParsedPlace[] {
     return [];
   }
   const root = data as { features?: unknown } | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   const features: any[] = Array.isArray(root?.features)
     ? (root.features as any[])
     : Array.isArray(data)
       ? (data as any[])
       : [];
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   const out: ParsedPlace[] = [];
   for (const f of features) {
     const props = f?.properties ?? {};
