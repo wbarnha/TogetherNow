@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/lib/app/store";
 import { applyShareCode, buildShareCode, parseShareCode } from "@/lib/app/share";
 import { inviteLink, sendInvite } from "@/lib/app/invite";
+import { InviteStatusBanner } from "@/components/app/InviteStatus";
 
 export const Route = createFileRoute("/pair")({
   head: () => ({
@@ -50,9 +51,14 @@ function PairPage() {
 
   const invite = async () => {
     const result = await sendInvite(state);
+    if (result === "failed") {
+      setState((prev) => ({ ...prev, inviteFailedAt: Date.now() }));
+      toast.error("Couldn't share the invite", { action: { label: "Retry", onClick: invite } });
+      return;
+    }
+    setState((prev) => ({ ...prev, inviteSentAt: Date.now(), inviteFailedAt: null }));
     if (result === "shared") toast.success("Invite sent");
-    else if (result === "copied") toast.success("Invite copied — paste it to your partner");
-    else if (result === "failed") toast.error("Couldn't share the invite");
+    else toast.success("Invite copied — paste it to your partner");
   };
 
   const copy = async () => {
@@ -108,6 +114,7 @@ function PairPage() {
         </TabsList>
 
         <TabsContent value="invite" className="mt-4 space-y-4">
+          <InviteStatusBanner state={state} onRetry={invite} />
           <div className="space-y-4 rounded-3xl border border-border bg-card p-5 text-center">
             <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <Heart className="size-6" />
@@ -122,7 +129,8 @@ function PairPage() {
               </p>
             </div>
             <Button onClick={invite} size="lg" className="w-full">
-              <Send className="size-4" /> Send invite
+              <Send className="size-4" />
+              {state.inviteFailedAt ? "Retry invite" : state.inviteSentAt ? "Send again" : "Send invite"}
             </Button>
             <p className="break-all font-mono text-[11px] text-muted-foreground">
               {hydrated ? inviteLink(state) : ""}
@@ -130,7 +138,7 @@ function PairPage() {
           </div>
           <p className="px-1 text-xs text-muted-foreground">
             {state.pairedAt
-              ? `Connected with ${state.them.name || "your partner"}. Re-send any time to share your latest items.`
+              ? "Re-send any time to share your latest items."
               : "Not connected yet — once they open your link (or you merge their code), shared items start flowing both ways."}
           </p>
         </TabsContent>
