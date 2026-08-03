@@ -5,6 +5,8 @@ import { MESSENGERS } from "@/lib/app/messengers";
 import { clockIn } from "@/lib/app/time";
 import { useNow } from "@/lib/app/store";
 import { Settings2 } from "lucide-react";
+import { toast } from "sonner";
+import { ASSISTANTS, launchAssistant } from "@/lib/app/assistants";
 
 export const Route = createFileRoute("/messages")({
   head: () => ({
