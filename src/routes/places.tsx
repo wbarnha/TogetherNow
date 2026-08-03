@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { CalendarPlus, Check, ExternalLink, MapPin, Trash2, Upload } from "lucide-react";
+import { lazy, Suspense, useMemo, useState } from "react";
+import { ClientOnly } from "@tanstack/react-router";
+import { CalendarPlus, Check, ExternalLink, List, Map, MapPin, Trash2, Upload } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { EventDialog } from "@/components/app/EventDialog";
 import { ImportPlacesDialog } from "@/components/app/ImportPlacesDialog";
@@ -11,6 +12,10 @@ import { useStore } from "@/lib/app/store";
 import { toISODate } from "@/lib/app/time";
 import type { Place } from "@/lib/app/types";
 import { cn } from "@/lib/utils";
+import type { MappablePlace } from "@/components/app/PlacesMap";
+
+// Leaflet touches window at import time, so it only loads in the browser.
+const PlacesMap = lazy(() => import("@/components/app/PlacesMap"));
 
 export const Route = createFileRoute("/places")({
   head: () => ({
@@ -41,6 +46,7 @@ function PlacesPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["value"]>("want");
   const [planning, setPlanning] = useState<Place | null>(null);
+  const [view, setView] = useState<"list" | "map">("list");
 
   const places = useMemo(
     () =>
@@ -48,6 +54,11 @@ function PlacesPage() {
         .filter((p) => (filter === "been" ? p.visited : !p.visited))
         .sort((a, b) => b.updatedAt - a.updatedAt),
     [state.places, filter],
+  );
+
+  const mapped = useMemo(
+    () => places.filter((p): p is MappablePlace => p.lat != null && p.lng != null),
+    [places],
   );
 
   return (
@@ -83,7 +94,60 @@ function PlacesPage() {
         ))}
       </div>
 
-      {places.length === 0 ? (
+      <div className="flex gap-2 rounded-2xl bg-muted/60 p-1">
+        {([
+          { value: "list", label: "List", icon: List },
+          { value: "map", label: "Map", icon: Map },
+        ] as const).map((v) => (
+          <button
+            key={v.value}
+            type="button"
+            onClick={() => setView(v.value)}
+            aria-pressed={view === v.value}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-sm transition-colors",
+              view === v.value
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground",
+            )}
+          >
+            <v.icon className="size-4" />
+            {v.label}
+          </button>
+        ))}
+      </div>
+
+      {view === "map" ? (
+        <section className="overflow-hidden rounded-3xl border border-border bg-card">
+          {mapped.length === 0 ? (
+            <div className="p-6 text-center">
+              <MapPin className="mx-auto size-6 text-muted-foreground" />
+              <p className="mt-3 font-display text-lg font-semibold">Nothing to pin yet</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Ideas need coordinates to show on the map — import a Google Maps list, KML or GPX
+                file and their pins will appear here.
+              </p>
+            </div>
+          ) : (
+            <ClientOnly
+              fallback={<div className="h-[420px] w-full animate-pulse bg-muted" />}
+            >
+              <Suspense fallback={<div className="h-[420px] w-full animate-pulse bg-muted" />}>
+                <PlacesMap
+                  places={mapped}
+                  meName={state.me.name}
+                  themName={state.them.name}
+                  onSelect={setPlanning}
+                />
+              </Suspense>
+            </ClientOnly>
+          )}
+          <p className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
+            {mapped.length} of {places.length} {places.length === 1 ? "idea" : "ideas"} have a
+            location
+          </p>
+        </section>
+      ) : places.length === 0 ? (
         <section className="rounded-3xl border border-dashed border-border bg-card/60 p-6 text-center">
           <MapPin className="mx-auto size-6 text-muted-foreground" />
           <p className="mt-3 font-display text-lg font-semibold">
