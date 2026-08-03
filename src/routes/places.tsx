@@ -253,7 +253,7 @@ function PlacesPage() {
       <div className="flex gap-2 rounded-2xl bg-muted/60 p-1">
         {([
           { value: "list", label: "List", icon: List },
-          { value: "map", label: "Map", icon: Map },
+          { value: "map", label: "Map", icon: MapIcon },
         ] as const).map((v) => (
           <button
             key={v.value}
@@ -272,6 +272,86 @@ function PlacesPage() {
           </button>
         ))}
       </div>
+
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        <button
+          type="button"
+          onClick={() => setCategory("all")}
+          aria-pressed={category === "all"}
+          className={cn(
+            "shrink-0 rounded-full border px-3 py-1.5 text-sm transition-colors",
+            category === "all"
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-border text-muted-foreground",
+          )}
+        >
+          All types
+        </button>
+        {PLACE_CATEGORIES.filter((c) => (categoryCounts.get(c.value) ?? 0) > 0).map((c) => (
+          <button
+            key={c.value}
+            type="button"
+            onClick={() => setCategory(c.value)}
+            aria-pressed={category === c.value}
+            className={cn(
+              "shrink-0 rounded-full border px-3 py-1.5 text-sm transition-colors",
+              category === c.value
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border text-muted-foreground",
+            )}
+          >
+            {c.label}
+            <span className="ml-1.5 opacity-60">{categoryCounts.get(c.value)}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        <Select value={sort} onValueChange={(v) => setSort(v as typeof sort)}>
+          <SelectTrigger className="rounded-2xl" aria-label="Sort ideas">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SORTS.map((s) => (
+              <SelectItem key={s.value} value={s.value}>
+                {s.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={radius} onValueChange={(v) => setRadius(v as typeof radius)}>
+          <SelectTrigger className="rounded-2xl" aria-label="Filter by distance">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {RADII.map((r) => (
+              <SelectItem key={r.value} value={r.value}>
+                {r.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {needsLocation ? (
+        <button
+          type="button"
+          onClick={locate}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border px-3 py-2 text-sm text-muted-foreground"
+        >
+          <Crosshair className="size-4" />
+          {locating ? "Finding you…" : "Use my location for distances"}
+        </button>
+      ) : origin ? (
+        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <Crosshair className="size-3.5" /> Distances from your current location
+          </span>
+          <button type="button" className="underline" onClick={() => setOrigin(null)}>
+            Clear
+          </button>
+        </div>
+      ) : null}
 
       {view === "map" ? (
         <section className="overflow-hidden rounded-3xl border border-border bg-card">
@@ -307,13 +387,16 @@ function PlacesPage() {
         <section className="rounded-3xl border border-dashed border-border bg-card/60 p-6 text-center">
           <MapPin className="mx-auto size-6 text-muted-foreground" />
           <p className="mt-3 font-display text-lg font-semibold">
-            {filter === "been" ? "Nowhere ticked off yet" : "No ideas saved yet"}
+            {state.places.length > 0
+              ? "No ideas match those filters"
+              : "No ideas saved yet"}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Import a saved list from Google Maps or Apple Maps and every pin becomes a date idea
-            you both can see.
+            {state.places.length > 0
+              ? "Try clearing the search, widening the distance or picking another type."
+              : "Import a saved list from Google Maps or Apple Maps and every pin becomes a date idea you both can see."}
           </p>
-          {filter === "want" ? (
+          {state.places.length === 0 ? (
             <Button className="mt-4 rounded-2xl" onClick={() => setImportOpen(true)}>
               <Upload className="mr-2 size-4" />
               Import saved places
@@ -322,7 +405,7 @@ function PlacesPage() {
         </section>
       ) : (
         <ul className="space-y-3">
-          {places.map((place) => (
+          {places.map(({ place, distance }) => (
             <li
               key={place.id}
               className="rounded-3xl border border-border bg-card p-4"
@@ -330,6 +413,10 @@ function PlacesPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate font-display text-lg font-semibold">{place.name}</p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    {categoryLabel(placeCategory(place))}
+                    {distance != null ? ` · ${formatDistance(distance)} away` : ""}
+                  </p>
                   {place.address ? (
                     <p className="truncate text-sm text-muted-foreground">{place.address}</p>
                   ) : null}
