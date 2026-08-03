@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { initialState, type AppState, type Milestone, type PlanEvent } from "./types";
+import { syncReminders } from "./reminders";
 
 const KEY = "together-now:v1";
 
@@ -56,6 +57,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     }
     const root = document.documentElement;
     root.classList.toggle("dark", state.theme === "dark");
+    void syncReminders(state).catch(() => {
+      /* notifications are best-effort */
+    });
   }, [state, hydrated]);
 
   const setState = useCallback((updater: (prev: AppState) => AppState) => {
