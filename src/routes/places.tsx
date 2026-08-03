@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { ClientOnly } from "@tanstack/react-router";
-import { CalendarPlus, Check, ExternalLink, List, Map, MapPin, Share2, Trash2, Upload } from "lucide-react";
+import { CalendarHeart, CalendarPlus, Check, ExternalLink, List, Map, MapPin, Share2, Trash2, Upload } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/app/AppShell";
 import { EventDialog } from "@/components/app/EventDialog";
 import { ExportPlacesDialog } from "@/components/app/ExportPlacesDialog";
@@ -9,9 +10,9 @@ import { ImportPlacesDialog } from "@/components/app/ImportPlacesDialog";
 import { OwnerBadge } from "@/components/app/OwnerBadge";
 import { Button } from "@/components/ui/button";
 import { mapLink } from "@/lib/app/places";
-import { useStore } from "@/lib/app/store";
+import { newId, useStore } from "@/lib/app/store";
 import { toISODate } from "@/lib/app/time";
-import type { Place } from "@/lib/app/types";
+import type { Place, PlanEvent } from "@/lib/app/types";
 import { cn } from "@/lib/utils";
 import type { MappablePlace } from "@/components/app/PlacesMap";
 
@@ -42,13 +43,48 @@ const FILTERS = [
   { value: "been", label: "Been" },
 ] as const;
 
+/** Next Friday from today (today counts if it is already Friday). */
+function nextDateNightISO() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7));
+  return toISODate(d);
+}
+
 function PlacesPage() {
-  const { state, upsertPlace, removePlace } = useStore();
+  const { state, upsertPlace, removePlace, upsertEvent, removeEvent } = useStore();
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["value"]>("want");
   const [planning, setPlanning] = useState<Place | null>(null);
+  const [editingEvent, setEditingEvent] = useState<PlanEvent | null>(null);
   const [view, setView] = useState<"list" | "map">("list");
+
+  /** One tap: drop the idea straight onto the shared calendar as a plan for both of us. */
+  const planTogether = (place: Place) => {
+    const event: PlanEvent = {
+      id: newId(),
+      title: place.name,
+      date: nextDateNightISO(),
+      time: "19:00",
+      anchor: "me",
+      owner: "us",
+      notes: [place.address, place.url].filter(Boolean).join("\n") || undefined,
+      updatedAt: Date.now(),
+    };
+    upsertEvent(event);
+    toast.success(`${place.name} is on your shared calendar`, {
+      description: `${event.date} at 7:00 PM ${state.me.name || "your"} time — for both of you.`,
+      action: {
+        label: "Edit",
+        onClick: () => setEditingEvent(event),
+      },
+      cancel: {
+        label: "Undo",
+        onClick: () => removeEvent(event.id),
+      },
+    });
+  };
 
   const places = useMemo(
     () =>
@@ -205,12 +241,20 @@ function PlacesPage() {
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Button
                   size="sm"
+                  className="rounded-2xl"
+                  onClick={() => planTogether(place)}
+                >
+                  <CalendarHeart className="mr-1.5 size-4" />
+                  Plan for us
+                </Button>
+                <Button
+                  size="sm"
                   variant="outline"
                   className="rounded-2xl"
                   onClick={() => setPlanning(place)}
                 >
                   <CalendarPlus className="mr-1.5 size-4" />
-                  Plan it
+                  Pick a time
                 </Button>
                 <Button size="sm" variant="outline" className="rounded-2xl" asChild>
                   <a href={mapLink(place)} target="_blank" rel="noreferrer">
@@ -245,10 +289,14 @@ function PlacesPage() {
       <ImportPlacesDialog open={importOpen} onOpenChange={setImportOpen} />
       <ExportPlacesDialog open={exportOpen} onOpenChange={setExportOpen} />
       <EventDialog
-        open={planning !== null}
+        open={planning !== null || editingEvent !== null}
         onOpenChange={(v) => {
-          if (!v) setPlanning(null);
+          if (!v) {
+            setPlanning(null);
+            setEditingEvent(null);
+          }
         }}
+        editing={editingEvent}
         defaultDate={toISODate(new Date())}
         defaultTitle={planning?.name ?? ""}
         defaultNotes={[planning?.address, planning?.url].filter(Boolean).join("\n")}
