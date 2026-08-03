@@ -25,6 +25,10 @@ export type Milestone = {
   /** repeat every year */
   recurring: boolean;
   owner: Owner;
+  /** days before the date to be nudged; defaults to the app-wide setting */
+  reminders?: number[] | undefined;
+  /** silence this one without deleting it */
+  remindersOff?: boolean | undefined;
   updatedAt: number;
 };
 
@@ -205,6 +209,8 @@ export type AppState = {
   expenses: Expense[];
   goals: SavingsGoal[];
   reminderLeadDays: number;
+  /** hour of the day (0-23) reminders fire on this device */
+  reminderHour: number;
   theme: "light" | "dark";
   sharing: SharingPrefs;
   /** calendars imported on this device */
@@ -239,6 +245,7 @@ export const initialState = (): AppState => ({
   expenses: [],
   goals: [],
   reminderLeadDays: 3,
+  reminderHour: 9,
   theme: "light",
   sharing: { plans: true, dates: true, ideas: true, moods: true, money: true },
   calendarSources: [],
