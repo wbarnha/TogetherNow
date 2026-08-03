@@ -188,9 +188,31 @@ export type CalendarSource = {
   lastImportAt: number;
 };
 
+/** One message in the unified conversation archive. */
+export type ChatMessage = {
+  id: string;
+  source: "imessage" | "discord" | "instagram" | "unknown";
+  /** "me" or "them" — group chats collapse to the two of you */
+  owner: "me" | "them";
+  senderName: string;
+  text: string;
+  /** epoch ms */
+  at: number;
+};
+
+/** A file that was brought into the archive. */
+export type ChatImport = {
+  id: string;
+  source: "imessage" | "discord" | "instagram" | "unknown";
+  label: string;
+  messageCount: number;
+  firstAt: number;
+  lastAt: number;
+  importedAt: number;
+};
+
 export type AppState = {
   version: 1;
-
   onboarded: boolean;
   me: Profile;
   them: Profile;
