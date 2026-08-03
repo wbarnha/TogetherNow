@@ -1,5 +1,5 @@
 import LZString from "lz-string";
-import type { AppState, Milestone, MoodEntry, PlanEvent } from "./types";
+import type { AppState, Expense, Milestone, MoodEntry, PlanEvent, SavingsGoal } from "./types";
 
 export type SharePayload = {
   v: 1;
@@ -9,6 +9,8 @@ export type SharePayload = {
   events: PlanEvent[];
   milestones: Milestone[];
   moods?: MoodEntry[];
+  expenses?: Expense[];
+  goals?: SavingsGoal[];
   at: number;
 };
 
@@ -25,6 +27,8 @@ export function buildShareCode(state: AppState): string {
     milestones: state.milestones.filter((m) => m.owner !== "them"),
     // my recent mood check-ins so they land as "them" on the other device
     moods: state.moods.filter((m) => m.owner === "me").slice(-30),
+    expenses: state.expenses,
+    goals: state.goals,
     at: Date.now(),
   };
   return PREFIX + LZString.compressToEncodedURIComponent(JSON.stringify(payload));
@@ -69,6 +73,22 @@ export function applyShareCode(state: AppState, payload: SharePayload) {
   const milestones = mergeById(state.milestones, flip(payload.milestones));
   const incomingMoods: MoodEntry[] = (payload.moods ?? []).map((m) => ({ ...m, owner: "them" }));
   const moods = mergeById(state.moods, incomingMoods);
+  // money is two-sided: swap the payer / saver perspective for the receiving device
+  const incomingExpenses: Expense[] = (payload.expenses ?? []).map((e) => ({
+    ...e,
+    paidBy: e.paidBy === "me" ? "them" : "me",
+    split: e.split === "mine" ? "theirs" : e.split === "theirs" ? "mine" : e.split,
+    myPercent: e.split === "custom" ? 100 - (e.myPercent ?? 50) : e.myPercent,
+  }));
+  const expenses = mergeById(state.expenses, incomingExpenses);
+  const incomingGoals: SavingsGoal[] = (payload.goals ?? []).map((g) => ({
+    ...g,
+    savedByMe: g.savedByThem,
+    savedByThem: g.savedByMe,
+    monthlyByMe: g.monthlyByThem,
+    monthlyByThem: g.monthlyByMe,
+  }));
+  const goals = mergeById(state.goals, incomingGoals);
   const next: AppState = {
     ...state,
     them: {
@@ -80,13 +100,15 @@ export function applyShareCode(state: AppState, payload: SharePayload) {
     events: events.items,
     milestones: milestones.items,
     moods: moods.items,
+    expenses: expenses.items,
+    goals: goals.items,
   };
   return {
     state: next,
     summary: {
       from: payload.from,
-      added: events.added + milestones.added,
-      updated: events.updated + milestones.updated,
+      added: events.added + milestones.added + expenses.added + goals.added,
+      updated: events.updated + milestones.updated + expenses.updated + goals.updated,
     },
   };
 }
