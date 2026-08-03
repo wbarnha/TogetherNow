@@ -4,7 +4,10 @@ import { useStore } from "@/lib/app/store";
 import { MESSENGERS } from "@/lib/app/messengers";
 import { clockIn } from "@/lib/app/time";
 import { useNow } from "@/lib/app/store";
-import { Settings2 } from "lucide-react";
+import { History, Settings2, Upload } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ImportMessagesDialog } from "@/components/app/ImportMessagesDialog";
 import { toast } from "sonner";
 import { ASSISTANTS, launchAssistant } from "@/lib/app/assistants";
 
@@ -30,6 +33,7 @@ export const Route = createFileRoute("/messages")({
 function MessagesPage() {
   const { state } = useStore();
   const now = useNow(30000);
+  const [importOpen, setImportOpen] = useState(false);
   const configured = MESSENGERS.filter((m) => (state.them.handles[m.id] ?? "").trim());
   const missing = MESSENGERS.filter((m) => !(state.them.handles[m.id] ?? "").trim());
 
@@ -42,6 +46,28 @@ function MessagesPage() {
           : "One tap to any conversation"
       }
     >
+      <section className="space-y-3 rounded-3xl border border-border bg-card p-5">
+        <div>
+          <h2 className="font-display text-lg font-semibold">One shared history</h2>
+          <p className="text-xs text-muted-foreground">
+            Bring your iMessage, Discord, and Instagram exports into a single searchable timeline —
+            {state.chatMessages.length
+              ? ` ${state.chatMessages.length} messages so far.`
+              : " it all stays on this device."}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button className="flex-1" onClick={() => setImportOpen(true)}>
+            <Upload className="size-4" /> Import messages
+          </Button>
+          <Button asChild variant="outline" className="flex-1">
+            <Link to="/history">
+              <History className="size-4" /> Open history
+            </Link>
+          </Button>
+        </div>
+      </section>
+
       {configured.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-border bg-card/50 p-6 text-sm text-muted-foreground">
           Add {state.them.name || "their"} handles in{" "}
@@ -139,8 +165,11 @@ function MessagesPage() {
 
       <p className="px-1 pb-2 text-xs leading-relaxed text-muted-foreground">
         These are shortcuts, not inboxes. Apple, Meta, and Discord don&apos;t let other apps read
-        your message history, so nothing you say is stored here.
+        your conversations live — history only comes from the exports you import, and it stays on
+        this device.
       </p>
+
+      <ImportMessagesDialog open={importOpen} onOpenChange={setImportOpen} />
     </AppShell>
   );
 }

@@ -188,6 +188,29 @@ export type CalendarSource = {
   lastImportAt: number;
 };
 
+/** One message in the unified conversation archive. */
+export type ChatMessage = {
+  id: string;
+  source: "imessage" | "discord" | "instagram" | "unknown";
+  /** "me" or "them" — group chats collapse to the two of you */
+  owner: "me" | "them";
+  senderName: string;
+  text: string;
+  /** epoch ms */
+  at: number;
+};
+
+/** A file that was brought into the archive. */
+export type ChatImport = {
+  id: string;
+  source: "imessage" | "discord" | "instagram" | "unknown";
+  label: string;
+  messageCount: number;
+  firstAt: number;
+  lastAt: number;
+  importedAt: number;
+};
+
 export type AppState = {
   version: 1;
   onboarded: boolean;
@@ -215,6 +238,10 @@ export type AppState = {
   sharing: SharingPrefs;
   /** calendars imported on this device */
   calendarSources: CalendarSource[];
+  /** unified conversation history imported from chat app exports */
+  chatMessages: ChatMessage[];
+  /** which exports have been brought in */
+  chatImports: ChatImport[];
   /** last time a code of mine was handed over */
   lastSharedAt: number | null;
   /** last time a code from them was merged in */
@@ -249,6 +276,8 @@ export const initialState = (): AppState => ({
   theme: "light",
   sharing: { plans: true, dates: true, ideas: true, moods: true, money: true },
   calendarSources: [],
+  chatMessages: [],
+  chatImports: [],
   lastSharedAt: null,
   lastReceivedAt: null,
 });
