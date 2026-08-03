@@ -10,11 +10,13 @@ import {
 import {
   initialState,
   type AppState,
+  type Expense,
   type Milestone,
   type MoodEntry,
   type MoodScore,
   type Place,
   type PlanEvent,
+  type SavingsGoal,
   type Trip,
 } from "./types";
 import { syncReminders } from "./reminders";
@@ -37,6 +39,10 @@ type Ctx = {
   removeTrip: (id: string) => void;
   setMood: (score: MoodScore, note?: string, date?: string) => void;
   clearMood: (date?: string) => void;
+  upsertExpense: (e: Omit<Expense, "updatedAt"> & { updatedAt?: number }) => void;
+  removeExpense: (id: string) => void;
+  upsertGoal: (g: Omit<SavingsGoal, "updatedAt"> & { updatedAt?: number }) => void;
+  removeGoal: (id: string) => void;
   reset: () => void;
 };
 
@@ -174,6 +180,32 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           };
         }),
       reset: () => setState(() => initialState()),
+      upsertExpense: (e) =>
+        setState((prev) => {
+          const item: Expense = { ...e, updatedAt: Date.now() } as Expense;
+          const exists = prev.expenses.some((x) => x.id === item.id);
+          return {
+            ...prev,
+            expenses: exists
+              ? prev.expenses.map((x) => (x.id === item.id ? item : x))
+              : [...prev.expenses, item],
+          };
+        }),
+      removeExpense: (id) =>
+        setState((prev) => ({ ...prev, expenses: prev.expenses.filter((e) => e.id !== id) })),
+      upsertGoal: (g) =>
+        setState((prev) => {
+          const item: SavingsGoal = { ...g, updatedAt: Date.now() } as SavingsGoal;
+          const exists = prev.goals.some((x) => x.id === item.id);
+          return {
+            ...prev,
+            goals: exists
+              ? prev.goals.map((x) => (x.id === item.id ? item : x))
+              : [...prev.goals, item],
+          };
+        }),
+      removeGoal: (id) =>
+        setState((prev) => ({ ...prev, goals: prev.goals.filter((g) => g.id !== id) })),
     }),
     [state, hydrated, setState],
   );
