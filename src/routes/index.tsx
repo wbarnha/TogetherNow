@@ -5,6 +5,7 @@ import { CalendarPlus, MessageCircle, Moon, QrCode, Sun } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { Onboarding } from "@/components/app/Onboarding";
 import { EventDialog } from "@/components/app/EventDialog";
+import { MoodWidget } from "@/components/app/MoodWidget";
 import { EventCard } from "./calendar";
 import { milestoneNext } from "./milestones";
 import { Button } from "@/components/ui/button";
@@ -110,6 +111,8 @@ function Home() {
           </p>
         </div>
       ) : null}
+
+      <MoodWidget compact />
 
       {nextMilestone ? (
         <Link
