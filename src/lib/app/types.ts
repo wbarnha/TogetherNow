@@ -28,6 +28,16 @@ export type Milestone = {
   updatedAt: number;
 };
 
+export type PlaceCategory =
+  | "food"
+  | "drinks"
+  | "outdoors"
+  | "culture"
+  | "nightlife"
+  | "stay"
+  | "shopping"
+  | "other";
+
 export type Place = {
   id: string;
   name: string;
@@ -39,6 +49,8 @@ export type Place = {
   lng?: number | undefined;
   owner: Owner;
   source: "google" | "apple" | "manual";
+  /** set by the user; when absent it is guessed from the name */
+  category?: PlaceCategory | undefined;
   /** already been there together */
   visited: boolean;
   updatedAt: number;

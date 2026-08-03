@@ -315,6 +315,76 @@ export function mapLink(place: Place) {
 
 /* --------------------------- deduplication ------------------------------ */
 
+/* ---------------------------- categories -------------------------------- */
+
+export const PLACE_CATEGORIES = [
+  { value: "food", label: "Food" },
+  { value: "drinks", label: "Coffee & drinks" },
+  { value: "outdoors", label: "Outdoors" },
+  { value: "culture", label: "Culture" },
+  { value: "nightlife", label: "Nightlife" },
+  { value: "stay", label: "Stays" },
+  { value: "shopping", label: "Shopping" },
+  { value: "other", label: "Other" },
+] as const satisfies ReadonlyArray<{ value: PlaceCategory; label: string }>;
+
+const CATEGORY_HINTS: [PlaceCategory, RegExp][] = [
+  [
+    "food",
+    /\b(restaurant|pizz|sushi|ramen|taco|burger|bistro|kitchen|grill|diner|bbq|noodle|deli|bakery|pastr|brunch|steak|thai|curry|trattoria|osteria|eatery|food)\b/,
+  ],
+  [
+    "drinks",
+    /\b(coffee|cafe|caf[eé]|espresso|roaster|tea ?house|boba|juice|smoothie)\b/,
+  ],
+  [
+    "nightlife",
+    /\b(bar|pub|tavern|brewery|brewpub|taproom|cocktail|wine ?bar|club|lounge|speakeasy|karaoke)\b/,
+  ],
+  [
+    "outdoors",
+    /\b(park|trail|hike|hiking|beach|lake|garden|mountain|falls|forest|canyon|island|overlook|viewpoint|botanic|zoo|campground)\b/,
+  ],
+  [
+    "culture",
+    /\b(museum|gallery|theat|cinema|movie|opera|concert|library|aquarium|historic|castle|cathedral|temple|shrine|memorial|observatory)\b/,
+  ],
+  ["stay", /\b(hotel|hostel|motel|inn|resort|airbnb|bnb|lodge|cabin|suites)\b/],
+  [
+    "shopping",
+    /\b(shop|store|market|mall|boutique|bookstore|books|thrift|vintage|record)\b/,
+  ],
+];
+
+/** Best-guess category from the place's name, note and address. */
+export function guessCategory(place: {
+  name?: string | undefined;
+  note?: string | undefined;
+  address?: string | undefined;
+}): PlaceCategory {
+  const text = `${place.name ?? ""} ${place.note ?? ""} ${place.address ?? ""}`.toLowerCase();
+  for (const [category, pattern] of CATEGORY_HINTS) {
+    if (pattern.test(text)) return category;
+  }
+  return "other";
+}
+
+/** The category to show/filter on: what the user set, else the guess. */
+export function placeCategory(place: Place): PlaceCategory {
+  return place.category ?? guessCategory(place);
+}
+
+export function categoryLabel(category: PlaceCategory) {
+  return PLACE_CATEGORIES.find((c) => c.value === category)?.label ?? "Other";
+}
+
+/** Human distance, metric-free so it reads fine anywhere. */
+export function formatDistance(meters: number) {
+  if (meters < 1000) return `${Math.round(meters / 10) * 10} m`;
+  const km = meters / 1000;
+  return `${km < 10 ? km.toFixed(1) : Math.round(km)} km`;
+}
+
 const NOISE_WORDS = new Set([
   "the", "a", "an", "of", "and", "&", "at", "in", "on",
   "restaurant", "cafe", "coffee", "bar", "shop", "store", "co", "inc", "llc",
