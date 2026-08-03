@@ -432,7 +432,7 @@ export function dedupeParsed(list: ParsedPlace[]) {
   const out: ParsedPlace[] = [];
   let merged = 0;
   for (const p of list) {
-    const i = out.findIndex((x) => x.id === undefined || isSamePlace(x, p));
+    const i = out.findIndex((x) => isSamePlace(x, p));
     if (i >= 0) {
       out[i] = mergeParsed(out[i]!, p);
       merged++;
