@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { QrCode, RotateCcw, Moon, Sun } from "lucide-react";
+import { QrCode, RotateCcw, Moon, Sun, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
@@ -163,6 +163,11 @@ function SettingsPage() {
 
       <section className="space-y-3 rounded-3xl border border-border bg-card p-5">
         <h2 className="font-display text-lg font-semibold">Your data</h2>
+        <Button asChild variant="outline" className="w-full">
+          <Link to="/partner">
+            <Users className="size-4" /> Partner &amp; sharing controls
+          </Link>
+        </Button>
         <Button asChild variant="outline" className="w-full">
           <Link to="/pair">
             <QrCode className="size-4" /> Share or import a code
