@@ -11,6 +11,7 @@ import { useStore } from "@/lib/app/store";
 import { applyShareCode, buildShareCode, parseShareCode } from "@/lib/app/share";
 import { inviteLink, sendInvite } from "@/lib/app/invite";
 import { InviteStatusBanner } from "@/components/app/InviteStatus";
+import { AcceptInvite } from "@/components/app/AcceptInvite";
 
 export const Route = createFileRoute("/pair")({
   head: () => ({
@@ -37,6 +38,7 @@ function PairPage() {
   const [incoming, setIncoming] = useState("");
   const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState("invite");
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
 
   const code = useMemo(() => (hydrated ? buildShareCode(state) : ""), [state, hydrated]);
 
@@ -45,6 +47,7 @@ function PairPage() {
     const fromUrl = new URLSearchParams(window.location.search).get("code");
     if (fromUrl) {
       setIncoming(fromUrl);
+      setInviteCode(fromUrl);
       setTab("receive");
     }
   }, []);
