@@ -170,6 +170,10 @@ export type AppState = {
   startDate: string | null;
   /** when a partner's code was first merged in — null until you two are connected */
   pairedAt: number | null;
+  /** when the invite was last handed off successfully (share sheet / clipboard) */
+  inviteSentAt: number | null;
+  /** when the last invite attempt failed — cleared on a successful send or pairing */
+  inviteFailedAt: number | null;
   events: PlanEvent[];
   milestones: Milestone[];
   places: Place[];
@@ -195,6 +199,8 @@ export const initialState = (): AppState => ({
   them: { ...emptyProfile(), timeZone: "Europe/London" },
   startDate: null,
   pairedAt: null,
+  inviteSentAt: null,
+  inviteFailedAt: null,
   events: [],
   milestones: [],
   places: [],
