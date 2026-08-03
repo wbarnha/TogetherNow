@@ -64,6 +64,29 @@ export type MessengerId =
   | "whatsapp"
   | "telegram";
 
+/** 1 = rough, 5 = great */
+export type MoodScore = 1 | 2 | 3 | 4 | 5;
+
+export type MoodEntry = {
+  id: string;
+  /** whose mood — only "me" is editable on this device */
+  owner: "me" | "them";
+  /** yyyy-MM-dd in that person's local time */
+  date: string;
+  score: MoodScore;
+  note?: string | undefined;
+  updatedAt: number;
+};
+
+type LegacyMessengerId =
+  | "imessage"
+  | "facetime"
+  | "discord"
+  | "instagram"
+  | "whatsapp"
+  | "telegram";
+export type { LegacyMessengerId };
+
 export type TravelMode = "flight" | "train" | "bus" | "drive" | "ferry";
 
 /** One researched way of making a trip happen. */
@@ -126,6 +149,7 @@ export type AppState = {
   milestones: Milestone[];
   places: Place[];
   trips: Trip[];
+  moods: MoodEntry[];
   reminderLeadDays: number;
   theme: "light" | "dark";
 };
@@ -149,6 +173,7 @@ export const initialState = (): AppState => ({
   milestones: [],
   places: [],
   trips: [],
+  moods: [],
   reminderLeadDays: 3,
   theme: "light",
 });
