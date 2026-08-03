@@ -105,8 +105,8 @@ function Home() {
           {window.good ? <Sun className="size-5 shrink-0" /> : <Moon className="size-5 shrink-0" />}
           <p className="text-sm">
             {window.good
-              ? `Good moment to call — you're both awake. ${state.them.name || "They"} are ${gapLabel(gap)}.`
-              : `Probably a bad moment — ${state.them.name || "they"} are ${gapLabel(gap)}.`}
+              ? `Good moment to call — you're both awake (${state.them.name || "them"}: ${gapLabel(gap)}).`
+              : `Probably a bad moment to call (${state.them.name || "them"}: ${gapLabel(gap)}).`}
           </p>
         </div>
       ) : null}
