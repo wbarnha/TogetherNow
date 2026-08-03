@@ -49,7 +49,7 @@ export async function geocode(query: string, signal?: AbortSignal): Promise<GeoR
   url.searchParams.set("addressdetails", "0");
 
   const res = await fetch(url.toString(), {
-    signal,
+    signal: signal ?? null,
     headers: { Accept: "application/json" },
   });
   if (!res.ok) throw new Error(`Location search failed (${res.status})`);
