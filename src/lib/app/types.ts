@@ -215,6 +215,10 @@ export type AppState = {
   sharing: SharingPrefs;
   /** calendars imported on this device */
   calendarSources: CalendarSource[];
+  /** unified conversation history imported from chat app exports */
+  chatMessages: ChatMessage[];
+  /** which exports have been brought in */
+  chatImports: ChatImport[];
   /** last time a code of mine was handed over */
   lastSharedAt: number | null;
   /** last time a code from them was merged in */
