@@ -28,6 +28,22 @@ export type Milestone = {
   updatedAt: number;
 };
 
+export type Place = {
+  id: string;
+  name: string;
+  address?: string | undefined;
+  note?: string | undefined;
+  /** link back to Google/Apple Maps */
+  url?: string | undefined;
+  lat?: number | undefined;
+  lng?: number | undefined;
+  owner: Owner;
+  source: "google" | "apple" | "manual";
+  /** already been there together */
+  visited: boolean;
+  updatedAt: number;
+};
+
 export type MessengerId =
   | "imessage"
   | "facetime"
@@ -52,6 +68,7 @@ export type AppState = {
   startDate: string | null;
   events: PlanEvent[];
   milestones: Milestone[];
+  places: Place[];
   reminderLeadDays: number;
   theme: "light" | "dark";
 };
@@ -73,6 +90,7 @@ export const initialState = (): AppState => ({
   startDate: null,
   events: [],
   milestones: [],
+  places: [],
   reminderLeadDays: 3,
   theme: "light",
 });
