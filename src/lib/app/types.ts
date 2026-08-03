@@ -172,6 +172,7 @@ export type SharingPrefs = {
   ideas: boolean;
   moods: boolean;
   money: boolean;
+  watch: boolean;
 };
 
 /** A calendar file that was imported into the shared calendar. */
@@ -211,6 +212,34 @@ export type ChatImport = {
   importedAt: number;
 };
 
+export type WatchService = "netflix" | "hulu" | "steam" | "crunchyroll" | "other";
+
+/** One thing one of you watched or played. */
+export type WatchEntry = {
+  id: string;
+  service: WatchService;
+  title: string;
+  /** season / episode / chapter detail */
+  detail?: string | undefined;
+  owner: "me" | "them";
+  /** epoch ms */
+  at: number;
+  /** minutes watched or played, when known */
+  minutes?: number | undefined;
+  /** both of you were in front of it */
+  together?: boolean | undefined;
+};
+
+/** A viewing-history export that was brought in. */
+export type WatchImport = {
+  id: string;
+  service: WatchService;
+  label: string;
+  owner: "me" | "them";
+  entryCount: number;
+  importedAt: number;
+};
+
 export type AppState = {
   version: 1;
   onboarded: boolean;
@@ -242,6 +271,9 @@ export type AppState = {
   chatMessages: ChatMessage[];
   /** which exports have been brought in */
   chatImports: ChatImport[];
+  /** what you two have been watching and playing */
+  watchEntries: WatchEntry[];
+  watchImports: WatchImport[];
   /** last time a code of mine was handed over */
   lastSharedAt: number | null;
   /** last time a code from them was merged in */
@@ -274,10 +306,12 @@ export const initialState = (): AppState => ({
   reminderLeadDays: 3,
   reminderHour: 9,
   theme: "light",
-  sharing: { plans: true, dates: true, ideas: true, moods: true, money: true },
+  sharing: { plans: true, dates: true, ideas: true, moods: true, money: true, watch: true },
   calendarSources: [],
   chatMessages: [],
   chatImports: [],
+  watchEntries: [],
+  watchImports: [],
   lastSharedAt: null,
   lastReceivedAt: null,
 });
