@@ -97,6 +97,7 @@ export function applyShareCode(state: AppState, payload: SharePayload) {
       timeZone: payload.fromZone || state.them.timeZone,
     },
     startDate: state.startDate ?? payload.startDate,
+    pairedAt: state.pairedAt ?? Date.now(),
     events: events.items,
     milestones: milestones.items,
     moods: moods.items,
