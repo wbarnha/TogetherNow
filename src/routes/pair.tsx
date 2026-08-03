@@ -59,7 +59,12 @@ function PairPage() {
       toast.error("Couldn't share the invite", { action: { label: "Retry", onClick: invite } });
       return;
     }
-    setState((prev) => ({ ...prev, inviteSentAt: Date.now(), inviteFailedAt: null }));
+    setState((prev) => ({
+      ...prev,
+      inviteSentAt: Date.now(),
+      inviteFailedAt: null,
+      lastSharedAt: Date.now(),
+    }));
     if (result === "shared") toast.success("Invite sent");
     else toast.success("Invite copied — paste it to your partner");
   };
@@ -68,6 +73,7 @@ function PairPage() {
     try {
       await navigator.clipboard.writeText(code);
       setCopied(true);
+      setState((prev) => ({ ...prev, lastSharedAt: Date.now() }));
       setTimeout(() => setCopied(false), 2000);
       toast.success("Share code copied");
     } catch {
