@@ -26,15 +26,9 @@ describe("matching helpers", () => {
   });
 
   it("measures distance between coordinates", () => {
-    const d = distanceMeters(
-      { lat: 37.7749, lng: -122.4194 },
-      { lat: 37.7749, lng: -122.4194 },
-    );
+    const d = distanceMeters({ lat: 37.7749, lng: -122.4194 }, { lat: 37.7749, lng: -122.4194 });
     expect(d).toBe(0);
-    const far = distanceMeters(
-      { lat: 37.7749, lng: -122.4194 },
-      { lat: 37.7596, lng: -122.4269 },
-    );
+    const far = distanceMeters({ lat: 37.7749, lng: -122.4194 }, { lat: 37.7596, lng: -122.4269 });
     expect(far).toBeGreaterThan(1000);
   });
 

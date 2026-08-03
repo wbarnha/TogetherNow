@@ -67,9 +67,7 @@ function MessagesPage() {
                   {m.name.slice(0, 1)}
                 </span>
                 <span className="block font-medium">{m.name}</span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {handle}
-                </span>
+                <span className="block truncate text-xs text-muted-foreground">{handle}</span>
                 {m.webFallback ? (
                   <span className="mt-2 block text-[11px] text-muted-foreground">
                     App not installed?{" "}
@@ -99,13 +97,9 @@ function MessagesPage() {
 
       {missing.length > 0 ? (
         <section className="space-y-2 pt-2">
-          <h2 className="px-1 text-sm font-medium text-muted-foreground">
-            Not set up yet
-          </h2>
+          <h2 className="px-1 text-sm font-medium text-muted-foreground">Not set up yet</h2>
           <div className="rounded-3xl border border-border bg-card p-4">
-            <p className="text-sm text-muted-foreground">
-              {missing.map((m) => m.name).join(", ")}
-            </p>
+            <p className="text-sm text-muted-foreground">{missing.map((m) => m.name).join(", ")}</p>
             <Link
               to="/settings"
               className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-primary"
@@ -144,8 +138,8 @@ function MessagesPage() {
       </section>
 
       <p className="px-1 pb-2 text-xs leading-relaxed text-muted-foreground">
-        These are shortcuts, not inboxes. Apple, Meta, and Discord don&apos;t let other
-        apps read your message history, so nothing you say is stored here.
+        These are shortcuts, not inboxes. Apple, Meta, and Discord don&apos;t let other apps read
+        your message history, so nothing you say is stored here.
       </p>
     </AppShell>
   );

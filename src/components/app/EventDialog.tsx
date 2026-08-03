@@ -59,8 +59,7 @@ export function EventDialog({
 
   const fromZone = anchor === "me" ? state.me.timeZone : state.them.timeZone;
   const toZone = anchor === "me" ? state.them.timeZone : state.me.timeZone;
-  const otherName =
-    anchor === "me" ? state.them.name || "them" : state.me.name || "you";
+  const otherName = anchor === "me" ? state.them.name || "them" : state.me.name || "you";
   const preview = time ? convertWallTime(date, time, fromZone, toZone) : null;
 
   const save = () => {

@@ -89,11 +89,7 @@ export function ImportPlacesDialog({
       }
     })();
     setSelected(
-      new Set(
-        result.places
-          .filter((p) => !findExistingPlace(p, state.places))
-          .map(placeId),
-      ),
+      new Set(result.places.filter((p) => !findExistingPlace(p, state.places)).map(placeId)),
     );
     if (result.places.length === 0) toast.error("No places found in that file");
     else if (result.merged > 0) {
@@ -194,7 +190,9 @@ export function ImportPlacesDialog({
                 id="places-paste"
                 rows={5}
                 value={pasted}
-                placeholder={"Sushi place — https://maps.app.goo.gl/...\nhttps://maps.apple.com/?q=..."}
+                placeholder={
+                  "Sushi place — https://maps.app.goo.gl/...\nhttps://maps.apple.com/?q=..."
+                }
                 onChange={(e) => setPasted(e.target.value)}
                 className="rounded-2xl"
               />
@@ -255,18 +253,12 @@ export function ImportPlacesDialog({
               <div className="flex items-center justify-between">
                 <Label>
                   {places.length} found · {selected.size} selected
-                  {existingMatches.size > 0
-                    ? ` · ${existingMatches.size} already saved`
-                    : ""}
+                  {existingMatches.size > 0 ? ` · ${existingMatches.size} already saved` : ""}
                 </Label>
                 <button
                   type="button"
                   className="text-xs text-primary underline-offset-2 hover:underline"
-                  onClick={() =>
-                    setSelected(
-                      selected.size > 0 ? new Set() : new Set(freshIds),
-                    )
-                  }
+                  onClick={() => setSelected(selected.size > 0 ? new Set() : new Set(freshIds))}
                 >
                   {selected.size > 0 ? "Clear all" : "Select new"}
                 </button>

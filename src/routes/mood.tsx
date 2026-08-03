@@ -59,10 +59,7 @@ function MoodPage() {
   if (!hydrated) return <div className="min-h-screen bg-background" />;
 
   return (
-    <AppShell
-      title="Mood"
-      subtitle="A daily check-in you can both see"
-    >
+    <AppShell title="Mood" subtitle="A daily check-in you can both see">
       <MoodWidget />
 
       <section className="rounded-3xl border border-border bg-card p-4">
@@ -79,7 +76,8 @@ function MoodPage() {
 
       {avg !== null ? (
         <p className="px-1 text-sm text-muted-foreground">
-          Your last 30 check-ins average {avg} / 5 ({moodOption(Math.round(avg) as MoodScore)?.label}
+          Your last 30 check-ins average {avg} / 5 (
+          {moodOption(Math.round(avg) as MoodScore)?.label}
           ).
         </p>
       ) : null}
@@ -91,11 +89,7 @@ function MoodPage() {
         onDelete={(date) => clearMood(date)}
         today={today}
       />
-      <MoodList
-        title={`${state.them.name || "Them"} — history`}
-        tone="theirs"
-        entries={theirs}
-      />
+      <MoodList title={`${state.them.name || "Them"} — history`} tone="theirs" entries={theirs} />
     </AppShell>
   );
 }

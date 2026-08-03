@@ -44,9 +44,7 @@ export function AppShell({
             <h1 className="font-display text-3xl leading-tight font-semibold tracking-tight text-foreground">
               {title}
             </h1>
-            {subtitle ? (
-              <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
-            ) : null}
+            {subtitle ? <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}
           </div>
           {action}
         </header>

@@ -44,9 +44,7 @@ export function QrCode({ value, size = 220 }: { value: string; size?: number }) 
       className="flex items-center justify-center rounded-3xl bg-white p-3 shadow-sm"
       style={{ width: size, height: size }}
     >
-      {src ? (
-        <img src={src} alt="Share code QR" width={size - 24} height={size - 24} />
-      ) : null}
+      {src ? <img src={src} alt="Share code QR" width={size - 24} height={size - 24} /> : null}
     </div>
   );
 }

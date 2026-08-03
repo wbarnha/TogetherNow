@@ -164,9 +164,7 @@ export function parseIcs(raw: string, zone: string): ParsedIcsEvent[] {
       events.push({
         uid: props["UID"]?.value.trim(),
         title: summary ? unescapeText(summary) : "Untitled event",
-        ...(when.allDay
-          ? { date: when.date }
-          : instantToZoneParts(when.instant, zone)),
+        ...(when.allDay ? { date: when.date } : instantToZoneParts(when.instant, zone)),
         notes: notes || undefined,
       });
       continue;

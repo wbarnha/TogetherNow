@@ -1,15 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import {
-  Check,
-  ExternalLink,
-  Pencil,
-  Plane,
-  Plus,
-  Search,
-  Sparkles,
-  Wallet,
-} from "lucide-react";
+import { Check, ExternalLink, Pencil, Plane, Plus, Search, Sparkles, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/AppShell";
 import { TravelOptionDialog } from "@/components/app/TravelOptionDialog";
@@ -386,8 +377,8 @@ function TravelPage() {
       )}
 
       <p className="px-1 pb-2 text-xs leading-relaxed text-muted-foreground">
-        Prices and times are whatever you save here — nothing is fetched or shared automatically,
-        so use the export in Settings to send a copy to each other.
+        Prices and times are whatever you save here — nothing is fetched or shared automatically, so
+        use the export in Settings to send a copy to each other.
       </p>
 
       <TripDialog open={tripDialog} onOpenChange={setTripDialog} editing={editingTrip} />

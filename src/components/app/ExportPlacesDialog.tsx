@@ -52,17 +52,13 @@ export function ExportPlacesDialog({
         </DialogHeader>
 
         <p className="text-sm text-muted-foreground">
-          Save a CSV you can re-import on another device, open in Sheets or Numbers, or copy a
-          tidy list to paste straight into a chat with{" "}
-          {state.them.name || "your partner"}.
+          Save a CSV you can re-import on another device, open in Sheets or Numbers, or copy a tidy
+          list to paste straight into a chat with {state.them.name || "your partner"}.
         </p>
 
         <div className="space-y-3 rounded-2xl border border-border bg-muted/40 p-4">
           <label className="flex items-center gap-3 text-sm">
-            <Checkbox
-              checked={includeWant}
-              onCheckedChange={(v) => setIncludeWant(v === true)}
-            />
+            <Checkbox checked={includeWant} onCheckedChange={(v) => setIncludeWant(v === true)} />
             <span>
               Want to go <span className="text-muted-foreground">({wantCount})</span>
             </span>

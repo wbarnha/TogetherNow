@@ -37,7 +37,9 @@ export function moodFor(state: AppState, owner: "me" | "them", date: string) {
 }
 
 export function moodsFor(state: AppState, owner: "me" | "them") {
-  return [...state.moods].filter((m) => m.owner === owner).sort((a, b) => b.date.localeCompare(a.date));
+  return [...state.moods]
+    .filter((m) => m.owner === owner)
+    .sort((a, b) => b.date.localeCompare(a.date));
 }
 
 /** Last `days` dates ending today, oldest first. */
@@ -74,7 +76,14 @@ export type WidgetSnapshot = {
   updatedAt: number;
   couple: string;
   me: { name: string; score: MoodScore | null; emoji: string; label: string; note: string | null };
-  them: { name: string; score: MoodScore | null; emoji: string; label: string; note: string | null; date: string | null };
+  them: {
+    name: string;
+    score: MoodScore | null;
+    emoji: string;
+    label: string;
+    note: string | null;
+    date: string | null;
+  };
   streak: number;
   next: { title: string; date: string; owner: Owner } | null;
 };

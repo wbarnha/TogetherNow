@@ -51,9 +51,13 @@ export function balances(expenses: Expense[]): CurrencyBalance[] {
   const map = new Map<string, CurrencyBalance>();
   for (const e of expenses) {
     if (e.settled) continue;
-    const row =
-      map.get(e.currency) ??
-      { currency: e.currency, net: 0, paidByMe: 0, paidByThem: 0, total: 0 };
+    const row = map.get(e.currency) ?? {
+      currency: e.currency,
+      net: 0,
+      paidByMe: 0,
+      paidByThem: 0,
+      total: 0,
+    };
     row.net += expenseBalance(e);
     row.total += e.amount;
     if (e.paidBy === "me") row.paidByMe += e.amount;
@@ -133,8 +137,7 @@ export function goalProgress(goal: SavingsGoal, now = new Date()): GoalProgress 
     const [y, m, d] = goal.deadline.split("-").map(Number);
     if (y && m && d) {
       const due = new Date(y, m - 1, d);
-      const diff =
-        (due.getFullYear() - now.getFullYear()) * 12 + (due.getMonth() - now.getMonth());
+      const diff = (due.getFullYear() - now.getFullYear()) * 12 + (due.getMonth() - now.getMonth());
       monthsLeft = Math.max(0, diff);
       neededMonthly = monthsLeft > 0 ? round2(remaining / monthsLeft) : remaining;
     }

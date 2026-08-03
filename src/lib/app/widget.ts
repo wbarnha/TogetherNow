@@ -39,7 +39,7 @@ export function moodFromUrl(search: string): 1 | 2 | 3 | 4 | 5 | null {
     const params = new URLSearchParams(search);
     const raw = params.get("mood") ?? params.get("score");
     const n = raw ? Number(raw) : NaN;
-    return n >= 1 && n <= 5 ? ((Math.round(n) as 1 | 2 | 3 | 4 | 5)) : null;
+    return n >= 1 && n <= 5 ? (Math.round(n) as 1 | 2 | 3 | 4 | 5) : null;
   } catch {
     return null;
   }

@@ -90,8 +90,8 @@ function PairPage() {
           <div className="flex flex-col items-center gap-4 rounded-3xl border border-border bg-card p-5">
             <QrCode value={code || "TN1:"} />
             <p className="text-center text-sm text-muted-foreground">
-              Let {state.them.name || "your partner"} scan this with their camera, or send
-              them the text code below.
+              Let {state.them.name || "your partner"} scan this with their camera, or send them the
+              text code below.
             </p>
             <Button onClick={copy} className="w-full">
               {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
@@ -99,12 +99,8 @@ function PairPage() {
             </Button>
           </div>
           <details className="rounded-3xl border border-border bg-card p-4">
-            <summary className="cursor-pointer text-sm font-medium">
-              Show the raw code
-            </summary>
-            <p className="mt-3 break-all font-mono text-[11px] text-muted-foreground">
-              {code}
-            </p>
+            <summary className="cursor-pointer text-sm font-medium">Show the raw code</summary>
+            <p className="mt-3 break-all font-mono text-[11px] text-muted-foreground">{code}</p>
           </details>
         </TabsContent>
 
@@ -125,8 +121,8 @@ function PairPage() {
               Merge into my app
             </Button>
             <p className="text-xs text-muted-foreground">
-              Scanning a QR with your phone camera opens the code as text — copy and paste
-              it here. Merging keeps whichever version of an item was edited most recently.
+              Scanning a QR with your phone camera opens the code as text — copy and paste it here.
+              Merging keeps whichever version of an item was edited most recently.
             </p>
           </div>
         </TabsContent>

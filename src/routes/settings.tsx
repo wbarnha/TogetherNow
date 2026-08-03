@@ -33,8 +33,7 @@ export const Route = createFileRoute("/settings")({
       { title: "You two — Together Now" },
       {
         name: "description",
-        content:
-          "Names, time zones, messaging handles, reminders, and your data backup code.",
+        content: "Names, time zones, messaging handles, reminders, and your data backup code.",
       },
       { property: "og:title", content: "You two — Together Now" },
       {
@@ -62,9 +61,7 @@ function SettingsPage() {
             id="me-name"
             value={state.me.name}
             placeholder="Your name"
-            onChange={(e) =>
-              setState((p) => ({ ...p, me: { ...p.me, name: e.target.value } }))
-            }
+            onChange={(e) => setState((p) => ({ ...p, me: { ...p.me, name: e.target.value } }))}
           />
           <ZonePicker
             value={state.me.timeZone}
@@ -80,15 +77,11 @@ function SettingsPage() {
             id="them-name"
             value={state.them.name}
             placeholder="Their name"
-            onChange={(e) =>
-              setState((p) => ({ ...p, them: { ...p.them, name: e.target.value } }))
-            }
+            onChange={(e) => setState((p) => ({ ...p, them: { ...p.them, name: e.target.value } }))}
           />
           <ZonePicker
             value={state.them.timeZone}
-            onChange={(tz) =>
-              setState((p) => ({ ...p, them: { ...p.them, timeZone: tz } }))
-            }
+            onChange={(tz) => setState((p) => ({ ...p, them: { ...p.them, timeZone: tz } }))}
           />
         </div>
 
@@ -98,9 +91,7 @@ function SettingsPage() {
             id="start-date"
             type="date"
             value={state.startDate ?? ""}
-            onChange={(e) =>
-              setState((p) => ({ ...p, startDate: e.target.value || null }))
-            }
+            onChange={(e) => setState((p) => ({ ...p, startDate: e.target.value || null }))}
           />
         </div>
       </section>
@@ -117,14 +108,9 @@ function SettingsPage() {
         {MESSENGERS.map((m) => (
           <div key={m.id} className="space-y-1.5">
             <Label htmlFor={`h-${m.id}`} className="flex items-center gap-2">
-              <span
-                className="size-2.5 rounded-full"
-                style={{ backgroundColor: m.accent }}
-              />
+              <span className="size-2.5 rounded-full" style={{ backgroundColor: m.accent }} />
               {m.name}
-              <span className="text-xs font-normal text-muted-foreground">
-                {m.handleLabel}
-              </span>
+              <span className="text-xs font-normal text-muted-foreground">{m.handleLabel}</span>
             </Label>
             <Input
               id={`h-${m.id}`}
@@ -168,9 +154,7 @@ function SettingsPage() {
         <Button
           variant="outline"
           className="w-full"
-          onClick={() =>
-            setState((p) => ({ ...p, theme: p.theme === "dark" ? "light" : "dark" }))
-          }
+          onClick={() => setState((p) => ({ ...p, theme: p.theme === "dark" ? "light" : "dark" }))}
         >
           {state.theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
           {state.theme === "dark" ? "Switch to light" : "Switch to dark"}
@@ -194,8 +178,8 @@ function SettingsPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Erase all data?</AlertDialogTitle>
               <AlertDialogDescription>
-                Plans, dates, and profiles on this device are deleted. Your partner&apos;s
-                copy is untouched — you can import their code to get shared items back.
+                Plans, dates, and profiles on this device are deleted. Your partner&apos;s copy is
+                untouched — you can import their code to get shared items back.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

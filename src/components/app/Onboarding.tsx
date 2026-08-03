@@ -33,9 +33,7 @@ export function Onboarding() {
           <span className="flex size-14 items-center justify-center rounded-3xl bg-primary/10 text-primary">
             <Heart className="size-7" />
           </span>
-          <h1 className="mt-5 font-display text-4xl leading-tight font-semibold">
-            Together Now
-          </h1>
+          <h1 className="mt-5 font-display text-4xl leading-tight font-semibold">Together Now</h1>
           <p className="mt-2 max-w-xs text-sm text-muted-foreground">
             Two people, two time zones, one set of plans. Nothing leaves your phone.
           </p>

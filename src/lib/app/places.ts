@@ -45,7 +45,10 @@ export function parseCsv(text: string): string[][] {
   let row: string[] = [];
   let field = "";
   let quoted = false;
-  const src = text.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const src = text
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
 
   for (let i = 0; i < src.length; i++) {
     const c = src[i];
@@ -165,7 +168,12 @@ export function parsePlacesKml(text: string): ParsedPlace[] {
     out.push({
       name,
       address: pm.getElementsByTagName("address")[0]?.textContent?.trim() || undefined,
-      note: desc ? desc.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() : undefined,
+      note: desc
+        ? desc
+            .replace(/<[^>]*>/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+        : undefined,
       lat: Number.isFinite(lat) ? lat : undefined,
       lng: Number.isFinite(lng) ? lng : undefined,
     });
@@ -246,14 +254,19 @@ export function parsePlacesUrls(text: string): ParsedPlace[] {
     const match = line.match(/https?:\/\/\S+/);
     if (!match) continue;
     const url = match[0];
-    const label = line.slice(0, match.index).replace(/[-–—:•]\s*$/, "").trim();
+    const label = line
+      .slice(0, match.index)
+      .replace(/[-–—:•]\s*$/, "")
+      .trim();
     let name = label;
     if (!name) {
       try {
         const u = new URL(url);
         const qName = u.searchParams.get("q") ?? u.searchParams.get("name");
         const pathName = u.pathname.match(/\/place\/([^/@]+)/)?.[1];
-        name = decodeURIComponent(pathName ?? qName ?? "").replace(/\+/g, " ").trim();
+        name = decodeURIComponent(pathName ?? qName ?? "")
+          .replace(/\+/g, " ")
+          .trim();
         if (/^-?\d+\.\d+,/.test(name)) name = "";
         if (!name) name = u.hostname.includes("apple") ? "Apple Maps place" : "Google Maps place";
       } catch {
@@ -333,10 +346,7 @@ const CATEGORY_HINTS: [PlaceCategory, RegExp][] = [
     "food",
     /\b(restaurant|pizz|sushi|ramen|taco|burger|bistro|kitchen|grill|diner|bbq|noodle|deli|bakery|pastr|brunch|steak|thai|curry|trattoria|osteria|eatery|food)\b/,
   ],
-  [
-    "drinks",
-    /\b(coffee|cafe|caf[eé]|espresso|roaster|tea ?house|boba|juice|smoothie)\b/,
-  ],
+  ["drinks", /\b(coffee|cafe|caf[eé]|espresso|roaster|tea ?house|boba|juice|smoothie)\b/],
   [
     "nightlife",
     /\b(bar|pub|tavern|brewery|brewpub|taproom|cocktail|wine ?bar|club|lounge|speakeasy|karaoke)\b/,
@@ -350,10 +360,7 @@ const CATEGORY_HINTS: [PlaceCategory, RegExp][] = [
     /\b(museum|gallery|theat|cinema|movie|opera|concert|library|aquarium|historic|castle|cathedral|temple|shrine|memorial|observatory)\b/,
   ],
   ["stay", /\b(hotel|hostel|motel|inn|resort|airbnb|bnb|lodge|cabin|suites)\b/],
-  [
-    "shopping",
-    /\b(shop|store|market|mall|boutique|bookstore|books|thrift|vintage|record)\b/,
-  ],
+  ["shopping", /\b(shop|store|market|mall|boutique|bookstore|books|thrift|vintage|record)\b/],
 ];
 
 /** Best-guess category from the place's name, note and address. */
@@ -386,8 +393,24 @@ export function formatDistance(meters: number) {
 }
 
 const NOISE_WORDS = new Set([
-  "the", "a", "an", "of", "and", "&", "at", "in", "on",
-  "restaurant", "cafe", "coffee", "bar", "shop", "store", "co", "inc", "llc",
+  "the",
+  "a",
+  "an",
+  "of",
+  "and",
+  "&",
+  "at",
+  "in",
+  "on",
+  "restaurant",
+  "cafe",
+  "coffee",
+  "bar",
+  "shop",
+  "store",
+  "co",
+  "inc",
+  "llc",
 ]);
 
 /** Lowercase, accent-free, punctuation-free comparison form of a place name. */

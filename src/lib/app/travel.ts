@@ -127,8 +127,7 @@ export function searchLinks(trip: Trip): SearchLink[] {
 export function researchPrompt(trip: Trip, state: AppState) {
   const me = state.me.name || "me";
   const them = state.them.name || "my partner";
-  const who =
-    trip.traveller === "me" ? me : trip.traveller === "them" ? them : `${me} and ${them}`;
+  const who = trip.traveller === "me" ? me : trip.traveller === "them" ? them : `${me} and ${them}`;
   const when = trip.startDate
     ? `Travelling around ${trip.startDate}${trip.endDate ? ` and returning ${trip.endDate}` : ""}.`
     : "Dates are flexible - flag the cheapest weeks.";

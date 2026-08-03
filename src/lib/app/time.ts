@@ -121,12 +121,7 @@ export function wallTimeToInstant(dateISO: string, time: string, zone: string) {
  * Convert a wall-clock time in one zone to the wall-clock time in another zone,
  * on a given calendar date.
  */
-export function convertWallTime(
-  dateISO: string,
-  time: string,
-  fromZone: string,
-  toZone: string,
-) {
+export function convertWallTime(dateISO: string, time: string, fromZone: string, toZone: string) {
   const instant = wallTimeToInstant(dateISO, time, fromZone);
   return {
     time: formatInZone(instant, toZone, { hour: "numeric", minute: "2-digit", hour12: true }),

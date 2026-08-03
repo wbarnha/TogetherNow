@@ -7,8 +7,7 @@ import type { Place } from "@/lib/app/types";
 export type MappablePlace = Place & { lat: number; lng: number };
 
 function markerIcon(owner: Place["owner"], visited: boolean) {
-  const color =
-    owner === "me" ? "var(--mine)" : owner === "them" ? "var(--theirs)" : "var(--ours)";
+  const color = owner === "me" ? "var(--mine)" : owner === "them" ? "var(--theirs)" : "var(--ours)";
   return L.divIcon({
     className: "",
     iconSize: [26, 26],
@@ -85,7 +84,11 @@ export default function PlacesMap({
               <span className="mt-0.5 block text-xs text-muted-foreground">{place.address}</span>
             ) : null}
             <span className="mt-1 block text-xs text-muted-foreground">
-              {place.owner === "me" ? meName || "Me" : place.owner === "them" ? themName || "Them" : "Together"}
+              {place.owner === "me"
+                ? meName || "Me"
+                : place.owner === "them"
+                  ? themName || "Them"
+                  : "Together"}
               {place.visited ? " · been" : ""}
             </span>
             <button

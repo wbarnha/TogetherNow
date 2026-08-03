@@ -60,10 +60,7 @@ function eventBlock(e: PlanEvent, zone: string, stamp: string, durationMinutes: 
     const end = new Date(start.getTime() + durationMinutes * 60000);
     lines.push(`DTSTART:${utcStamp(start)}`, `DTEND:${utcStamp(end)}`);
   } else {
-    lines.push(
-      `DTSTART;VALUE=DATE:${dateStamp(e.date)}`,
-      `DTEND;VALUE=DATE:${nextDay(e.date)}`,
-    );
+    lines.push(`DTSTART;VALUE=DATE:${dateStamp(e.date)}`, `DTEND;VALUE=DATE:${nextDay(e.date)}`);
   }
   if (e.notes) lines.push(`DESCRIPTION:${escapeText(e.notes)}`);
   lines.push("END:VEVENT");
