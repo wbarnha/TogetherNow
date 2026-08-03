@@ -112,6 +112,7 @@ export function applyShareCode(state: AppState, payload: SharePayload) {
     startDate: state.startDate ?? payload.startDate,
     pairedAt: state.pairedAt ?? Date.now(),
     inviteFailedAt: null,
+    lastReceivedAt: Date.now(),
     events: events.items,
     milestones: milestones.items,
     moods: moods.items,
