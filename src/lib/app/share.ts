@@ -1,5 +1,13 @@
 import LZString from "lz-string";
-import type { AppState, Expense, Milestone, MoodEntry, PlanEvent, SavingsGoal } from "./types";
+import type {
+  AppState,
+  Expense,
+  Milestone,
+  MoodEntry,
+  Place,
+  PlanEvent,
+  SavingsGoal,
+} from "./types";
 
 export type SharePayload = {
   v: 1;
@@ -9,6 +17,8 @@ export type SharePayload = {
   events: PlanEvent[];
   milestones: Milestone[];
   moods?: MoodEntry[];
+  /** the shared "Together" list — shortlisted date ideas */
+  places?: Place[];
   expenses?: Expense[];
   goals?: SavingsGoal[];
   at: number;
@@ -27,6 +37,7 @@ export function buildShareCode(state: AppState): string {
     milestones: state.milestones.filter((m) => m.owner !== "them"),
     // my recent mood check-ins so they land as "them" on the other device
     moods: state.moods.filter((m) => m.owner === "me").slice(-30),
+    places: state.places.filter((p) => p.shortlisted && p.owner !== "them"),
     expenses: state.expenses,
     goals: state.goals,
     at: Date.now(),
@@ -73,6 +84,7 @@ export function applyShareCode(state: AppState, payload: SharePayload) {
   const milestones = mergeById(state.milestones, flip(payload.milestones));
   const incomingMoods: MoodEntry[] = (payload.moods ?? []).map((m) => ({ ...m, owner: "them" }));
   const moods = mergeById(state.moods, incomingMoods);
+  const places = mergeById(state.places, flip(payload.places ?? []));
   // money is two-sided: swap the payer / saver perspective for the receiving device
   const incomingExpenses: Expense[] = (payload.expenses ?? []).map((e) => ({
     ...e,
@@ -102,6 +114,7 @@ export function applyShareCode(state: AppState, payload: SharePayload) {
     events: events.items,
     milestones: milestones.items,
     moods: moods.items,
+    places: places.items,
     expenses: expenses.items,
     goals: goals.items,
   };
@@ -109,8 +122,23 @@ export function applyShareCode(state: AppState, payload: SharePayload) {
     state: next,
     summary: {
       from: payload.from,
-      added: events.added + milestones.added + expenses.added + goals.added,
-      updated: events.updated + milestones.updated + expenses.updated + goals.updated,
+      added: events.added + milestones.added + places.added + expenses.added + goals.added,
+      updated:
+        events.updated + milestones.updated + places.updated + expenses.updated + goals.updated,
     },
+  };
+}
+
+/** What a code contains, for the accept screen preview. */
+export function previewShareCode(payload: SharePayload) {
+  return {
+    from: payload.from,
+    fromZone: payload.fromZone,
+    startDate: payload.startDate,
+    events: payload.events.length,
+    milestones: payload.milestones.length,
+    places: (payload.places ?? []).length,
+    goals: (payload.goals ?? []).length,
+    expenses: (payload.expenses ?? []).length,
   };
 }
