@@ -276,6 +276,8 @@ export const initialState = (): AppState => ({
   theme: "light",
   sharing: { plans: true, dates: true, ideas: true, moods: true, money: true },
   calendarSources: [],
+  chatMessages: [],
+  chatImports: [],
   lastSharedAt: null,
   lastReceivedAt: null,
 });

@@ -10,6 +10,8 @@ import {
 import {
   initialState,
   type AppState,
+  type ChatImport,
+  type ChatMessage,
   type Expense,
   type Milestone,
   type MoodEntry,
@@ -43,6 +45,12 @@ type Ctx = {
   removeExpense: (id: string) => void;
   upsertGoal: (g: Omit<SavingsGoal, "updatedAt"> & { updatedAt?: number }) => void;
   removeGoal: (id: string) => void;
+  /** merges an imported export into the unified archive, skipping duplicates */
+  importChat: (
+    messages: ChatMessage[],
+    meta: Omit<ChatImport, "id" | "importedAt" | "messageCount">,
+  ) => number;
+  removeChatImport: (id: string, alsoMessages: boolean) => void;
   reset: () => void;
 };
 
@@ -206,6 +214,42 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         }),
       removeGoal: (id) =>
         setState((prev) => ({ ...prev, goals: prev.goals.filter((g) => g.id !== id) })),
+      importChat: (messages, meta) => {
+        let added = 0;
+        setState((prev) => {
+          const known = new Set(prev.chatMessages.map((m) => m.id));
+          const fresh = messages.filter((m) => !known.has(m.id));
+          added = fresh.length;
+          if (!fresh.length) return prev;
+          const record: ChatImport = {
+            ...meta,
+            id: newId(),
+            messageCount: fresh.length,
+            importedAt: Date.now(),
+          };
+          return {
+            ...prev,
+            chatMessages: [...prev.chatMessages, ...fresh].sort((a, b) => a.at - b.at),
+            chatImports: [...prev.chatImports, record],
+          };
+        });
+        return added;
+      },
+      removeChatImport: (id, alsoMessages) =>
+        setState((prev) => {
+          const record = prev.chatImports.find((i) => i.id === id);
+          return {
+            ...prev,
+            chatImports: prev.chatImports.filter((i) => i.id !== id),
+            chatMessages:
+              alsoMessages && record
+                ? prev.chatMessages.filter(
+                    (m) =>
+                      !(m.source === record.source && m.at >= record.firstAt && m.at <= record.lastAt),
+                  )
+                : prev.chatMessages,
+          };
+        }),
     }),
     [state, hydrated, setState],
   );
