@@ -1,4 +1,4 @@
-import type { Owner, Place } from "./types";
+import type { Owner, Place, PlaceCategory } from "./types";
 
 export type ParsedPlace = {
   name: string;
