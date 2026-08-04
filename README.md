@@ -71,7 +71,7 @@ The app's promise is that nothing leaves the device, so the build enforces it:
   nowhere to send the archive. See `src/lib/security.ts`.
 - **Everything that comes in from outside is validated** before it reaches
   React state or storage — share codes, invite links, imported files, and
-  whatever is already in localStorage. See `src/lib/app/validate.ts` and
+  whatever was already in storage. See `src/lib/app/validate.ts` and
   `src/lib/app/safe-url.ts`.
 - **Invite links carry the share code in the URL fragment**, never the query
   string, so the payload is not sent to any server or logged along the way.

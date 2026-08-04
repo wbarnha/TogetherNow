@@ -150,17 +150,26 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   /* --------------------------- hydrate once --------------------------- */
 
   useEffect(() => {
-    // Storage is as untrusted as a share code: another script on this origin,
-    // an older buggy build, or a partial write can all leave malformed data
-    // behind, and the old code cast it straight to AppState.
-    const stored = readStoredState();
-    // Through setState, so the authoritative ref is loaded too.
-    // Attach owners to anything imported before ownership was tracked, so a
-    // later deletion cannot fall back to guessing at a time range.
-    if (stored !== undefined) {
-      setState(() => claimLegacyImports(migrateItemIds(validAppState(stored))));
-    }
-    setHydrated(true);
+    // Reading is asynchronous now that the archive lives in IndexedDB, so this
+    // guards against a resolve landing after the provider has gone.
+    let live = true;
+    void (async () => {
+      // Storage is as untrusted as a share code: another script on this origin,
+      // an older buggy build, or a partial write can all leave malformed data
+      // behind, and the old code cast it straight to AppState.
+      const stored = await readStoredState().catch(() => undefined);
+      if (!live) return;
+      // Through setState, so the authoritative ref is loaded too.
+      // Attach owners to anything imported before ownership was tracked, so a
+      // later deletion cannot fall back to guessing at a time range.
+      if (stored !== undefined) {
+        setState(() => claimLegacyImports(migrateItemIds(validAppState(stored))));
+      }
+      setHydrated(true);
+    })();
+    return () => {
+      live = false;
+    };
   }, [setState]);
 
   /* ------------------------- persist write-behind ---------------------- */
@@ -168,8 +177,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const writer = useRef<ReturnType<typeof createWriteBehind> | null>(null);
   if (writer.current === null) {
     writer.current = createWriteBehind(() => {
-      const outcome = writeStoredState(latest.current);
-      setStorageFull(outcome === "quota-exceeded");
+      void writeStoredState(latest.current).then((outcome) => {
+        setStorageFull(outcome === "quota-exceeded");
+      });
     });
   }
 
