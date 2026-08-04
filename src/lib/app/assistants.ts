@@ -1,3 +1,5 @@
+import { safeExternalUrl } from "./safe-url";
+
 /** ChatGPT and Claude quick-launch links, with the prompt prefilled where supported. */
 export type AssistantId = "chatgpt" | "claude";
 
@@ -40,6 +42,7 @@ export async function launchAssistant(assistant: Assistant, prompt: string) {
     /* clipboard blocked — the URL still carries the prompt */
   }
   const short = prompt.length <= 1500;
-  window.open(assistant.link(short ? prompt : ""), "_blank", "noopener");
-  return { copied, prefilled: short };
+  const target = safeExternalUrl(assistant.link(short ? prompt : ""));
+  if (target) window.open(target, "_blank", "noopener,noreferrer");
+  return { copied, prefilled: short && target !== undefined };
 }

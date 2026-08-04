@@ -1,0 +1,47 @@
+{
+  "$comment": [
+    "Single source of truth for everything the App Store and Play Console need to",
+    "agree on. capacitor.config.ts reads appId/appName from here, and",
+    "scripts/apply-native-config.mjs writes the rest into the generated ios/ and",
+    "android/ projects, which are regenerated rather than committed.",
+    "",
+    "BEFORE YOUR FIRST SUBMISSION you must change appId to a reverse-DNS",
+    "identifier on a domain you control. `app.lovable.*` is the app builder's",
+    "namespace, not yours: Apple will not let you register a bundle ID under it,",
+    "and on Play the package name is permanent once published. Changing it later",
+    "means shipping a different app. scripts/verify-store-readiness.mjs fails on",
+    "the placeholder so a release cannot go out with it.",
+    "",
+    "iosAppGroup must stay in sync with appId — it is how the home-screen widget",
+    "reads the mood snapshot. See MOBILE.md."
+  ],
+
+  "appId": "app.lovable.togethernow",
+  "appName": "Together Now",
+  "displayName": "Together Now",
+
+  "version": "1.0.0",
+  "buildNumber": 1,
+
+  "urlScheme": "togethernow",
+  "iosAppGroup": "group.app.lovable.togethernow",
+
+  "privacyPolicyUrl": "https://togethernow.app/privacy",
+  "supportUrl": "https://togethernow.app/support",
+
+  "permissions": {
+    "$comment": [
+      "Strings shown in the OS permission prompts. Apple rejects vague ones —",
+      "say what the app does with the data, not that it 'needs access'.",
+      "Android permissions are listed here so the manifest and the Play Data",
+      "Safety form are generated from the same place."
+    ],
+    "iosLocationWhenInUse": "Together Now uses your location once, on this device, to sort your saved date ideas by how far away they are. Your location is never stored and never leaves your phone.",
+    "androidUsesPermissions": [
+      {
+        "name": "android.permission.ACCESS_COARSE_LOCATION",
+        "why": "Sorting saved date ideas by distance when you tap 'use my location'. Coarse is deliberate: the feature only needs a neighbourhood, it is far easier to justify in Play review, and there is a manual 'pick an area' fallback. Trade-off: Capacitor asks the WebView for coarse and fine together, and only Android 12 (API 31) and later will settle for coarse alone — on Android 7 to 11 the button falls back to the manual picker. Adding ACCESS_FINE_LOCATION here would cover those too, at the cost of a more invasive prompt and more Play scrutiny."
+      }
+    ]
+  }
+}

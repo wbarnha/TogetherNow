@@ -6,7 +6,11 @@ export const SHARING_ITEMS: { key: keyof SharingPrefs; label: string; hint: stri
   { key: "ideas", label: "Together ideas", hint: "Date ideas you added to the Together list" },
   { key: "moods", label: "Mood check-ins", hint: "Your last 30 daily check-ins" },
   { key: "money", label: "Money", hint: "Shared expenses and savings goals" },
-  { key: "watch", label: "Viewing habits", hint: "Your Netflix, Hulu, Steam and Crunchyroll activity" },
+  {
+    key: "watch",
+    label: "Viewing habits",
+    hint: "Your Netflix, Hulu, Steam and Crunchyroll activity",
+  },
 ];
 
 /** How many of my items each sharing switch currently covers. */

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Apple privacy manifest. Required for App Store submission since 1 May 2024;
+  builds without one are rejected by App Store Connect's automated check.
+
+  NSPrivacyCollectedDataTypes is empty because Apple defines "collect" as
+  transmitting data off the device for longer than a request needs. This app
+  has no backend and no accounts: the archive lives in localStorage, and
+  partners exchange it directly as a share code. The one outbound request is
+  the optional place-name lookup the user triggers on the Ideas screen, which
+  is answered in real time and retained by nobody here. See STORE.md, which
+  explains how to answer the App Privacy questionnaire consistently with this.
+
+  NSPrivacyAccessedAPITypes must list every "required reason" API the app and
+  its bundled code touch. @capacitor/preferences writes the widget snapshot
+  through UserDefaults and ships no manifest of its own, so it is declared
+  here. CA92.1 is the reason for reading and writing only this app's own data.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

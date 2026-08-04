@@ -93,7 +93,8 @@ export function parseCsvRows(text: string): string[][] {
 
 function collect(messages: ParsedMessage[], source: ChatSourceId): ParsedExport {
   const senders: string[] = [];
-  for (const m of messages) if (m.senderName && !senders.includes(m.senderName)) senders.push(m.senderName);
+  for (const m of messages)
+    if (m.senderName && !senders.includes(m.senderName)) senders.push(m.senderName);
   messages.sort((a, b) => a.at - b.at);
   return { source, senders, messages };
 }
@@ -125,7 +126,12 @@ export function parseDiscordJson(data: unknown, me = "Me"): ParsedExport | null 
   if (!Array.isArray(data)) return null;
   const out: ParsedMessage[] = [];
   for (const raw of data) {
-    const m = raw as { Timestamp?: string; timestamp?: string; Contents?: string; contents?: string };
+    const m = raw as {
+      Timestamp?: string;
+      timestamp?: string;
+      Contents?: string;
+      contents?: string;
+    };
     const ts = m?.Timestamp ?? m?.timestamp;
     const body = clean(m?.Contents ?? m?.contents ?? "");
     if (!ts || !body) continue;
@@ -146,7 +152,8 @@ export function parseCsvExport(text: string, me = "Me"): ParsedExport | null {
   const bodyCol = idx("contents", "content", "text", "message", "body");
   if (tsCol < 0 || bodyCol < 0) return null;
   const senderCol = idx("sender", "sender name", "from", "author", "who");
-  const source: ChatSourceId = header.includes("contents") && senderCol < 0 ? "discord" : "imessage";
+  const source: ChatSourceId =
+    header.includes("contents") && senderCol < 0 ? "discord" : "imessage";
 
   const out: ParsedMessage[] = [];
   for (const row of rows.slice(1)) {
@@ -250,11 +257,7 @@ export function parseChatExport(text: string, fileName = "", me = "Me"): ParsedE
 export type OwnerMap = Record<string, Owner>;
 
 /** Guesses who each sender is from the two profile names. */
-export function guessOwners(
-  parsed: ParsedExport,
-  meName: string,
-  themName: string,
-): OwnerMap {
+export function guessOwners(parsed: ParsedExport, meName: string, themName: string): OwnerMap {
   const map: OwnerMap = {};
   const norm = (s: string) => s.trim().toLowerCase();
   for (const sender of parsed.senders) {

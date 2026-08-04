@@ -6,3 +6,11 @@ pnpm-lock.yaml
 package-lock.json
 bun.lock
 routeTree.gen.ts
+
+# Lovable-managed files — reformatting them fights the editor's own sync
+.lovable
+AGENTS.md
+
+# Generated native projects — owned by Capacitor, patched by scripts/apply-native-config.mjs
+android
+ios

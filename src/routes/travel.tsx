@@ -8,6 +8,7 @@ import { TripDialog } from "@/components/app/TripDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ASSISTANTS, launchAssistant } from "@/lib/app/assistants";
+import { safeHttpUrl } from "@/lib/app/safe-url";
 import { useStore } from "@/lib/app/store";
 import {
   formatDuration,
@@ -230,9 +231,9 @@ function TravelPage() {
                                         )}
                                       />
                                     </Button>
-                                    {option.url ? (
+                                    {safeHttpUrl(option.url) ? (
                                       <a
-                                        href={option.url}
+                                        href={safeHttpUrl(option.url)}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         aria-label="Open booking link"

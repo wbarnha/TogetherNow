@@ -1,11 +1,41 @@
 import type { AppState } from "./types";
 import { buildShareCode } from "./share";
 
-/** Where the invite link points — the app's own /pair page on this origin. */
+const DEFAULT_ORIGIN = "https://togethernow.app";
+
+function currentOrigin(): string {
+  return typeof window === "undefined" ? DEFAULT_ORIGIN : window.location.origin;
+}
+
+/**
+ * Where the invite link points — the app's own /pair page on this origin.
+ *
+ * The code rides in the URL *fragment*, not the query string. A fragment is
+ * never sent to a server, never appears in an access log or a `Referer`
+ * header, and is not forwarded to the third parties this page links out to.
+ * A `?code=` link leaks the couple's entire archive — plans, moods, expenses,
+ * viewing history — to every hop that handles the URL.
+ */
 export function inviteLink(state: AppState, origin?: string): string {
-  const base =
-    origin ?? (typeof window === "undefined" ? "https://togethernow.app" : window.location.origin);
-  return `${base}/pair?code=${encodeURIComponent(buildShareCode(state))}`;
+  return `${origin ?? currentOrigin()}/pair#code=${encodeURIComponent(buildShareCode(state))}`;
+}
+
+/**
+ * Pull an invite code out of a location, accepting the legacy `?code=` form so
+ * links sent before the move to fragments still open.
+ */
+export function readInviteCode(location: {
+  search: string;
+  hash: string;
+}): { code: string; legacy: boolean } | null {
+  const hash = location.hash.startsWith("#") ? location.hash.slice(1) : location.hash;
+  const fromHash = new URLSearchParams(hash).get("code");
+  if (fromHash) return { code: fromHash, legacy: false };
+
+  const fromQuery = new URLSearchParams(location.search).get("code");
+  if (fromQuery) return { code: fromQuery, legacy: true };
+
+  return null;
 }
 
 export function inviteMessage(state: AppState, origin?: string): string {

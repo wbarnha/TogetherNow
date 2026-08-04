@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { safeHttpUrl } from "@/lib/app/safe-url";
 import { newId, useStore } from "@/lib/app/store";
 import { TRAVEL_MODES } from "@/lib/app/travel";
 import type { TravelMode, TravelOption, Trip } from "@/lib/app/types";
@@ -60,7 +61,7 @@ export function TravelOptionDialog({
       cost: num(cost),
       durationMinutes: duration > 0 ? duration : undefined,
       detail: detail.trim() || undefined,
-      url: url.trim() || undefined,
+      url: safeHttpUrl(url),
       chosen: editing?.chosen ?? false,
       updatedAt: Date.now(),
     };

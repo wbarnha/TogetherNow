@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { boundPaste, importErrorMessage, readImportFile } from "@/lib/app/import-file";
 import { parseIcs, toPlanEvent, type ParsedIcsEvent } from "@/lib/app/ics";
 import { icsEventId } from "@/lib/app/ics";
 import { newId, useStore } from "@/lib/app/store";
@@ -87,9 +88,15 @@ export function ImportIcsDialog({
 
   const onFile = async (file: File | undefined) => {
     if (!file) return;
-    const text = await file.text();
-    setSourceKind("ics-file");
-    load(text, file.name);
+    try {
+      const text = await readImportFile(file);
+      setSourceKind("ics-file");
+      load(text, file.name);
+    } catch (err) {
+      toast.error(`Couldn't open ${file.name}`, {
+        description: importErrorMessage(err, "The file couldn't be read."),
+      });
+    }
   };
 
   const close = () => {
@@ -112,7 +119,7 @@ export function ImportIcsDialog({
     setState((prev) => {
       const map = new Map(prev.events.map((e) => [e.id, e]));
       for (const e of incoming) map.set(e.id, e);
-      const sources = prev.calendarSources ?? [];
+      const sources = prev.calendarSources;
       const existing = sources.find((s) => s.label === sourceLabel && s.owner === owner);
       const entry: CalendarSource = {
         id: existing?.id ?? newId(),
@@ -176,7 +183,7 @@ export function ImportIcsDialog({
                 variant="outline"
                 className="w-full"
                 disabled={!pasted.trim()}
-                onClick={() => load(pasted, "your paste")}
+                onClick={() => load(boundPaste(pasted), "your paste")}
               >
                 <CalendarPlus className="size-4" /> Read pasted calendar
               </Button>

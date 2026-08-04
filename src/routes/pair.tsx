@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/lib/app/store";
 import { applyShareCode, buildShareCode, parseShareCode } from "@/lib/app/share";
-import { inviteLink, sendInvite } from "@/lib/app/invite";
+import { inviteLink, readInviteCode, sendInvite } from "@/lib/app/invite";
 import { InviteStatusBanner } from "@/components/app/InviteStatus";
 import { AcceptInvite } from "@/components/app/AcceptInvite";
 
@@ -44,12 +44,15 @@ function PairPage() {
 
   // Opening an invite link lands here with their code ready to merge.
   useEffect(() => {
-    const fromUrl = new URLSearchParams(window.location.search).get("code");
-    if (fromUrl) {
-      setIncoming(fromUrl);
-      setInviteCode(fromUrl);
-      setTab("receive");
-    }
+    const found = readInviteCode(window.location);
+    if (!found) return;
+    setIncoming(found.code);
+    setInviteCode(found.code);
+    setTab("receive");
+    // Take the payload out of the address bar either way: it is the partner's
+    // whole archive, and leaving it there puts it in browser history, in the
+    // share sheet, and in the `Referer` sent to anything this page links to.
+    window.history.replaceState(null, "", window.location.pathname);
   }, []);
 
   const invite = async () => {

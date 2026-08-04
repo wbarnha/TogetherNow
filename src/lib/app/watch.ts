@@ -52,7 +52,13 @@ export const WATCH_SERVICES: {
     kind: "watch",
     how: "Profile → History (or your GDPR data export) exported as CSV.",
   },
-  { id: "other", name: "Other", accent: "#8b7d8b", kind: "watch", how: "Any CSV with a title and a date column." },
+  {
+    id: "other",
+    name: "Other",
+    accent: "#8b7d8b",
+    kind: "watch",
+    how: "Any CSV with a title and a date column.",
+  },
 ];
 
 export function serviceMeta(id: WatchService) {
@@ -106,7 +112,7 @@ export function parseDateish(raw: string): number | null {
   }
   const slash = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
   if (slash) {
-    let [, a, b, y] = slash as unknown as [string, string, string, string];
+    const [, a, b, y] = slash as unknown as [string, string, string, string];
     let year = Number(y);
     if (year < 100) year += 2000;
     let month = Number(a);
@@ -124,7 +130,10 @@ export function parseDateish(raw: string): number | null {
 
 /** "Show: Season 1: Episode name" → title + detail */
 export function splitTitle(raw: string): { title: string; detail?: string } {
-  const parts = raw.split(":").map((p) => p.trim()).filter(Boolean);
+  const parts = raw
+    .split(":")
+    .map((p) => p.trim())
+    .filter(Boolean);
   if (parts.length <= 1) return { title: raw.trim() };
   const [title, ...rest] = parts;
   return { title: title!, detail: rest.join(" · ") };
@@ -148,7 +157,8 @@ export function detectService(fileName: string, text: string): WatchService {
   const head = text.slice(0, 2000).toLowerCase();
   if (n.includes("netflix") || head.includes("netflixviewinghistory")) return "netflix";
   if (n.includes("hulu")) return "hulu";
-  if (n.includes("steam") || head.includes("playtime_forever") || head.includes("appid")) return "steam";
+  if (n.includes("steam") || head.includes("playtime_forever") || head.includes("appid"))
+    return "steam";
   if (n.includes("crunchyroll") || head.includes("crunchyroll")) return "crunchyroll";
   return "other";
 }
@@ -161,7 +171,12 @@ function parseSteamJson(text: string): ParsedWatch[] | null {
       games?: unknown[];
     };
     const games = (data.response?.games ?? data.games) as
-      | { name?: string; playtime_forever?: number; playtime_2weeks?: number; rtime_last_played?: number }[]
+      | {
+          name?: string;
+          playtime_forever?: number;
+          playtime_2weeks?: number;
+          rtime_last_played?: number;
+        }[]
       | undefined;
     if (!Array.isArray(games)) return null;
     return games
@@ -281,7 +296,9 @@ export function minutesOf(e: WatchLike) {
 }
 
 export function serviceTotals(entries: WatchLike[]) {
-  return WATCH_SERVICES.filter((s) => s.id !== "other" || entries.some((e) => e.service === "other"))
+  return WATCH_SERVICES.filter(
+    (s) => s.id !== "other" || entries.some((e) => e.service === "other"),
+  )
     .map((s) => {
       const mine = entries.filter((e) => e.service === s.id && e.owner === "me");
       const theirs = entries.filter((e) => e.service === s.id && e.owner === "them");

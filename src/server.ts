@@ -1,7 +1,8 @@
 import "./lib/error-capture";
 
-import { consumeLastCapturedError } from "./lib/error-capture";
+import { consumeCapturedError, withErrorCapture } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { applySecurityHeaders, createNonce, withNonce } from "./lib/security";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -28,11 +29,8 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   const body = await response.clone().text();
   if (!isH3SwallowedErrorBody(body)) return response;
 
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
-  return new Response(renderErrorPage(), {
-    status: 500,
-    headers: { "content-type": "text/html; charset=utf-8" },
-  });
+  console.error(consumeCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
+  return errorResponse();
 }
 
 function isH3SwallowedErrorBody(body: string): boolean {
@@ -44,18 +42,35 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+function errorResponse(): Response {
+  return new Response(renderErrorPage(), {
+    status: 500,
+    headers: { "content-type": "text/html; charset=utf-8" },
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
-    try {
-      const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
-    } catch (error) {
-      console.error(error);
-      return new Response(renderErrorPage(), {
-        status: 500,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
-    }
+    const nonce = createNonce();
+    const url = new URL(request.url);
+    const dev = import.meta.env.DEV;
+
+    // Every response leaves through here, so this is the one place that can
+    // guarantee the security headers are present whatever the route did — and
+    // the one place that can bind a fresh CSP nonce to the request.
+    const respond = (response: Response) => applySecurityHeaders(response, { nonce, url, dev });
+
+    return withErrorCapture(() =>
+      withNonce(nonce, async () => {
+        try {
+          const handler = await getServerEntry();
+          const response = await handler.fetch(request, env, ctx);
+          return respond(await normalizeCatastrophicSsrResponse(response));
+        } catch (error) {
+          console.error(error);
+          return respond(errorResponse());
+        }
+      }),
+    );
   },
 };

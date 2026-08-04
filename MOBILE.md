@@ -8,19 +8,24 @@ iOS, Android Studio for Android.
 
 ```bash
 git clone <your repo> && cd <your repo>
-npm install
-npm run build            # outputs to .output/public
-npx cap add ios          # macOS only
-npx cap add android
+bun install
+bun run build:mobile     # outputs to .output/public, including index.html
+bunx cap add ios         # macOS only
+bunx cap add android
+bun run native:config    # store settings into the generated projects
 ```
+
+Use `build:mobile` rather than `build`: a phone has no server to render into, so
+only the mobile build writes the static `index.html` that Capacitor copies.
 
 ## Every time you change the app
 
 ```bash
-npm run build
-npx cap sync
-npx cap open ios         # opens Xcode
-npx cap open android     # opens Android Studio
+bun run build:mobile
+bunx cap sync
+bun run native:config    # re-apply after every sync
+bunx cap open ios        # opens Xcode
+bunx cap open android    # opens Android Studio
 ```
 
 Then press Run in Xcode / Android Studio with your phone connected, or use a
@@ -29,8 +34,13 @@ selected under Signing & Capabilities.
 
 ## Notes
 
-- `capacitor.config.ts` sets the app ID `app.lovable.togethernow`; change it
-  before submitting to a store.
+- Store settings live in `native/app.json`, not in `capacitor.config.ts`, which
+  reads `appId` and `appName` from it. After `cap add`/`cap sync`, run
+  `bun run native:config` to write the privacy manifest, permission strings,
+  deep links, versions and release settings into the generated projects, then
+  `bun run store:check`. See [STORE.md](./STORE.md).
+- The app ID is still `app.lovable.togethernow`; change it in `native/app.json`
+  before submitting to a store, along with `iosAppGroup`.
 - Reminders use `@capacitor/local-notifications` and are scheduled on the
   device. They are silently skipped in a browser.
 - No backend, no accounts: all data lives in the device's local storage, and
@@ -40,6 +50,7 @@ selected under Signing & Capabilities.
 
 The app also works as an installable web app. Open the published URL on your
 phone and use Share → Add to Home Screen (iOS) or the install prompt (Android).
+
 ## Mood widgets (iOS & Android)
 
 The app writes a small JSON snapshot (both moods, streak, next plan) through
@@ -54,14 +65,16 @@ Capacitor Preferences, so the native widgets read it locally — no backend.
   logs as today's check-in.
 
 ### iOS
+
 1. `npx cap add ios && npx cap sync ios && npx cap open ios`
 2. File > New > Target > **Widget Extension** (name it `TogetherNowWidget`, uncheck Live Activity).
 3. Replace the generated Swift file with `native-widgets/ios/TogetherNowWidget.swift`.
-4. Signing & Capabilities: add **App Groups** → `group.app.lovable.togethernow`
-   to *both* the app target and the widget target.
-5. In `Info.plist` of the app target add a URL scheme `togethernow`.
+4. Signing & Capabilities: add **App Groups** → the `iosAppGroup` value from
+   `native/app.json` to _both_ the app target and the widget target.
+5. The `togethernow` URL scheme is already added by `bun run native:config`.
 
 ### Android
+
 1. `npx cap add android && npx cap sync android && npx cap open android`
 2. Add Glance to `android/app/build.gradle`:
    `implementation "androidx.glance:glance-appwidget:1.1.1"`
@@ -75,4 +88,4 @@ Capacitor Preferences, so the native widgets read it locally — no backend.
      <meta-data android:name="android.appwidget.provider" android:resource="@xml/mood_widget_info" />
    </receiver>
    ```
-5. Add an intent filter on `MainActivity` for the `togethernow` scheme.
+5. The `togethernow` intent filter is already added by `bun run native:config`.

@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { importErrorMessage, readImportFile } from "@/lib/app/import-file";
 import { useStore } from "@/lib/app/store";
 import {
   WATCH_SERVICES,
@@ -45,7 +46,7 @@ export function ImportWatchDialog({
     const next: Staged[] = [];
     for (const file of Array.from(files)) {
       try {
-        const text = await file.text();
+        const text = await readImportFile(file);
         const parsed = parseWatchFile(text, file.name);
         if (!parsed) {
           toast.error(`Couldn't read ${file.name}`, {
@@ -54,8 +55,10 @@ export function ImportWatchDialog({
           continue;
         }
         next.push({ fileName: file.name, parsed, owner: "me" });
-      } catch {
-        toast.error(`Couldn't open ${file.name}`);
+      } catch (err) {
+        toast.error(`Couldn't open ${file.name}`, {
+          description: importErrorMessage(err, "The file couldn't be read."),
+        });
       }
     }
     setStaged((prev) => [...prev, ...next]);

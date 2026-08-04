@@ -12,4 +12,9 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    // Never bind the preview server to every interface. It also defaults to
+    // `::`, which fails outright on IPv4-only hosts such as CI containers.
+    preview: { host: "127.0.0.1" },
+  },
 });

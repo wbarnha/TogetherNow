@@ -133,9 +133,7 @@ function Home() {
             <QrCode className="size-5" />
           </span>
           <span className="text-sm">
-            <span className="block font-medium">
-              Invite {state.them.name || "your partner"}
-            </span>
+            <span className="block font-medium">Invite {state.them.name || "your partner"}</span>
             <span className="block text-muted-foreground">
               Send a link to connect and start sharing Together items.
             </span>

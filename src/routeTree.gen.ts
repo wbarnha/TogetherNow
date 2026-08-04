@@ -19,6 +19,7 @@ import { Route as MoodRouteImport } from './routes/mood'
 import { Route as PairRouteImport } from './routes/pair'
 import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as PlacesRouteImport } from './routes/places'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SyncRouteImport } from './routes/sync'
 import { Route as TravelRouteImport } from './routes/travel'
@@ -74,6 +75,11 @@ const PlacesRoute = PlacesRouteImport.update({
   path: '/places',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/pair': typeof PairRoute
   '/partner': typeof PartnerRoute
   '/places': typeof PlacesRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/sync': typeof SyncRoute
   '/travel': typeof TravelRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/pair': typeof PairRoute
   '/partner': typeof PartnerRoute
   '/places': typeof PlacesRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/sync': typeof SyncRoute
   '/travel': typeof TravelRoute
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/pair': typeof PairRoute
   '/partner': typeof PartnerRoute
   '/places': typeof PlacesRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/sync': typeof SyncRoute
   '/travel': typeof TravelRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
     | '/pair'
     | '/partner'
     | '/places'
+    | '/privacy'
     | '/settings'
     | '/sync'
     | '/travel'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/pair'
     | '/partner'
     | '/places'
+    | '/privacy'
     | '/settings'
     | '/sync'
     | '/travel'
@@ -189,6 +200,7 @@ export interface FileRouteTypes {
     | '/pair'
     | '/partner'
     | '/places'
+    | '/privacy'
     | '/settings'
     | '/sync'
     | '/travel'
@@ -206,6 +218,7 @@ export interface RootRouteChildren {
   PairRoute: typeof PairRoute
   PartnerRoute: typeof PartnerRoute
   PlacesRoute: typeof PlacesRoute
+  PrivacyRoute: typeof PrivacyRoute
   SettingsRoute: typeof SettingsRoute
   SyncRoute: typeof SyncRoute
   TravelRoute: typeof TravelRoute
@@ -284,6 +297,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlacesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -326,6 +346,7 @@ const rootRouteChildren: RootRouteChildren = {
   PairRoute: PairRoute,
   PartnerRoute: PartnerRoute,
   PlacesRoute: PlacesRoute,
+  PrivacyRoute: PrivacyRoute,
   SettingsRoute: SettingsRoute,
   SyncRoute: SyncRoute,
   TravelRoute: TravelRoute,
@@ -334,3 +355,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
