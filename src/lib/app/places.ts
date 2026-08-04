@@ -1,3 +1,4 @@
+import { digestOf } from "./digest";
 import { safeHttpUrl } from "./safe-url";
 import type { Owner, Place, PlaceCategory } from "./types";
 
@@ -10,13 +11,30 @@ export type ParsedPlace = {
   lng?: number | undefined;
 };
 
-/** Stable id so re-importing the same list updates instead of duplicating. */
-export function placeId(p: ParsedPlace) {
-  const key =
+/** What identifies a place, independent of which id scheme hashes it. */
+function placeKey(p: ParsedPlace) {
+  return (
     p.url?.trim().toLowerCase() ||
     `${p.name.trim().toLowerCase()}|${p.address?.trim().toLowerCase() ?? ""}|${
       p.lat != null && p.lng != null ? `${p.lat.toFixed(4)},${p.lng.toFixed(4)}` : ""
-    }`;
+    }`
+  );
+}
+
+/**
+ * Stable id so re-importing the same list updates instead of duplicating.
+ *
+ * Places travel between devices in share codes, so a collision here does not
+ * just drop a saved idea — it merges two different real-world places into one
+ * on both phones.
+ */
+export function placeId(p: ParsedPlace) {
+  return `place-${digestOf(placeKey(p))}`;
+}
+
+/** The id this place would have had before the digest changed. */
+export function legacyPlaceId(p: ParsedPlace) {
+  const key = placeKey(p);
   let h = 0;
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0;
   return `place-${(h >>> 0).toString(36)}`;

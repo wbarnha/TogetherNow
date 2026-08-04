@@ -38,6 +38,7 @@ import {
   removeWatchImport,
   type MergeResult,
 } from "./imports";
+import { migrateItemIds } from "./migrate-ids";
 
 /**
  * Everything that mutates the archive. These identities are created once for
@@ -156,7 +157,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     // Through setState, so the authoritative ref is loaded too.
     // Attach owners to anything imported before ownership was tracked, so a
     // later deletion cannot fall back to guessing at a time range.
-    if (stored !== undefined) setState(() => claimLegacyImports(validAppState(stored)));
+    if (stored !== undefined) {
+      setState(() => claimLegacyImports(migrateItemIds(validAppState(stored))));
+    }
     setHydrated(true);
   }, [setState]);
 

@@ -1,3 +1,4 @@
+import { digestOf } from "./digest";
 import type { Owner } from "./types";
 
 export type ChatSourceId = "imessage" | "discord" | "instagram" | "unknown";
@@ -271,7 +272,27 @@ export function guessOwners(parsed: ParsedExport, meName: string, themName: stri
 }
 
 /** Stable id so re-importing the same export doesn't duplicate the thread. */
-export function messageId(source: ChatSourceId, at: number, text: string) {
+/**
+ * Stable id so re-importing the same export doesn't duplicate the thread.
+ *
+ * Everything that identifies a message goes in. The previous version hashed
+ * only source, timestamp and the first 120 characters into 32 bits — and then
+ * `Math.abs(h) >>> 0` folded the sign away, leaving 31. Two people replying
+ * in the same second with the same opening sentence collided outright, and at
+ * the archive's 200,000-message ceiling ordinary collisions were expected
+ * about five times over. A colliding message is not flagged: it is taken for a
+ * duplicate and dropped.
+ */
+export function messageId(source: ChatSourceId, at: number, senderName: string, text: string) {
+  return `msg-${digestOf(source, at, senderName, text)}`;
+}
+
+/**
+ * The id this message would have had before the digest changed.
+ *
+ * Kept so `migrateItemIds` can recognise archives written by an older build.
+ */
+export function legacyMessageId(source: ChatSourceId, at: number, text: string) {
   let h = 2166136261;
   const key = `${source}|${at}|${text.slice(0, 120)}`;
   for (let i = 0; i < key.length; i++) {
