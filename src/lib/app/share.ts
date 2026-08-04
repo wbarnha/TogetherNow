@@ -1,5 +1,7 @@
 import LZString from "lz-string";
 
+import { migratePlaceIds } from "./migrate-ids";
+
 import {
   LIMITS,
   isRecord,
@@ -259,9 +261,12 @@ export function applyShareCode(
     owner: "them",
   }));
   const moods = mergeById(state.moods, incomingMoods, ownedByMe, LIMITS.moods);
+  // Normalised first: a partner still on the previous build sends places under
+  // the old 32-bit ids, which would miss the copies already here and duplicate
+  // every one of them.
   const places = mergeById(
     state.places,
-    flip(take("places", payload.places)),
+    migratePlaceIds(flip(take("places", payload.places))),
     ownedByMe,
     LIMITS.places,
   );

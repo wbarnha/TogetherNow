@@ -86,7 +86,7 @@ export function ImportMessagesDialog({
     let skipped = 0;
     for (const s of staged) {
       const messages: ChatMessage[] = s.parsed.messages.map((m) => ({
-        id: messageId(s.parsed.source, m.at, m.text),
+        id: messageId(s.parsed.source, m.at, m.senderName, m.text),
         source: s.parsed.source,
         owner: (s.owners[m.senderName] ?? "them") as "me" | "them",
         senderName: m.senderName,

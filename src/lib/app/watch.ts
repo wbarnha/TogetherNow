@@ -1,3 +1,4 @@
+import { digestOf } from "./digest";
 import type { Owner } from "./types";
 
 export type WatchService = "netflix" | "hulu" | "steam" | "crunchyroll" | "other";
@@ -285,6 +286,11 @@ function hash32(key: string) {
 }
 
 export function watchId(service: WatchService, at: number, title: string, detail?: string) {
+  return `w-${service}-${digestOf(service, at, title, detail)}`;
+}
+
+/** The id this entry would have had before the digest changed. */
+export function legacyWatchId(service: WatchService, at: number, title: string, detail?: string) {
   return `w-${service}-${hash32(`${service}|${at}|${title}|${detail ?? ""}`)}`;
 }
 
@@ -306,6 +312,16 @@ export function undatedWatchId(
   detail: string | undefined,
   occurrence: number,
 ) {
+  return `w-${service}-u-${digestOf(service, title, detail, occurrence)}`;
+}
+
+/** The id an undated entry would have had before the digest changed. */
+export function legacyUndatedWatchId(
+  service: WatchService,
+  title: string,
+  detail: string | undefined,
+  occurrence: number,
+) {
   return `w-${service}-u-${hash32(`${service}|${title}|${detail ?? ""}|${occurrence}`)}`;
 }
 
@@ -314,6 +330,12 @@ export function undatedWatchId(
  *
  * `seen` counts how many identical undated rows have already been assigned an
  * id, so callers walk a file's rows in order through one shared map.
+ *
+ * The count is kept per service because the id is: the same title on Netflix
+ * and on Steam are different rows and each starts at occurrence 0. An import
+ * never notices, since one file is one service, but a caller sweeping a whole
+ * archive would otherwise number the second service's rows as repeats of the
+ * first and produce ids no fresh import could reproduce.
  */
 export function parsedWatchId(
   service: WatchService,
@@ -321,7 +343,7 @@ export function parsedWatchId(
   seen: Map<string, number>,
 ) {
   if (entry.at !== null) return watchId(service, entry.at, entry.title, entry.detail);
-  const key = `${entry.title}|${entry.detail ?? ""}`;
+  const key = `${service}|${entry.title}|${entry.detail ?? ""}`;
   const occurrence = seen.get(key) ?? 0;
   seen.set(key, occurrence + 1);
   return undatedWatchId(service, entry.title, entry.detail, occurrence);
