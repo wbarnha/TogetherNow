@@ -156,6 +156,44 @@ export function parseShareCode(raw: string): SharePayload {
   return payload;
 }
 
+/**
+ * Which categories of a code the recipient has agreed to take.
+ *
+ * A code can carry mood check-ins, spending and viewing history, and the
+ * accept screen used to list only plans, dates, ideas and savings goals — so
+ * the most personal categories arrived without ever being named. Accepting is
+ * now per category, and everything a code contains is disclosed first.
+ */
+export type AcceptChoices = Record<ShareCategory, boolean>;
+
+export type ShareCategory =
+  "events" | "milestones" | "places" | "moods" | "expenses" | "goals" | "watch";
+
+export const SHARE_CATEGORIES: {
+  key: ShareCategory;
+  label: string;
+  /** Worth a second look before accepting. */
+  sensitive: boolean;
+}[] = [
+  { key: "events", label: "Plans", sensitive: false },
+  { key: "milestones", label: "Important dates", sensitive: false },
+  { key: "places", label: "Together list ideas", sensitive: false },
+  { key: "goals", label: "Savings goals", sensitive: false },
+  { key: "expenses", label: "Shared expenses", sensitive: true },
+  { key: "moods", label: "Daily mood check-ins", sensitive: true },
+  { key: "watch", label: "Viewing and playing history", sensitive: true },
+];
+
+export const acceptAll = (): AcceptChoices => ({
+  events: true,
+  milestones: true,
+  places: true,
+  moods: true,
+  expenses: true,
+  goals: true,
+  watch: true,
+});
+
 /** Flip ownership of incoming items to the receiving device's perspective. */
 function flip<T extends { owner: "me" | "them" | "us" }>(items: T[]): T[] {
   return items.map((i) => ({ ...i, owner: i.owner === "me" ? "them" : i.owner }) as T);
@@ -197,26 +235,45 @@ const paidByMe = (item: { paidBy: string }) => item.paidBy === "me";
 /** Goals and expenses are jointly owned, so neither side can lock the other out. */
 const neverMine = () => false;
 
-export function applyShareCode(state: AppState, payload: SharePayload) {
-  const events = mergeById(state.events, flip(payload.events), ownedByMe, LIMITS.events);
+export function applyShareCode(
+  state: AppState,
+  payload: SharePayload,
+  choices: AcceptChoices = acceptAll(),
+) {
+  const take = <T>(category: ShareCategory, items: T[]): T[] => (choices[category] ? items : []);
+
+  const events = mergeById(
+    state.events,
+    flip(take("events", payload.events)),
+    ownedByMe,
+    LIMITS.events,
+  );
   const milestones = mergeById(
     state.milestones,
-    flip(payload.milestones),
+    flip(take("milestones", payload.milestones)),
     ownedByMe,
     LIMITS.milestones,
   );
-  const incomingMoods: MoodEntry[] = payload.moods.map((m) => ({ ...m, owner: "them" }));
+  const incomingMoods: MoodEntry[] = take("moods", payload.moods).map((m) => ({
+    ...m,
+    owner: "them",
+  }));
   const moods = mergeById(state.moods, incomingMoods, ownedByMe, LIMITS.moods);
-  const places = mergeById(state.places, flip(payload.places), ownedByMe, LIMITS.places);
+  const places = mergeById(
+    state.places,
+    flip(take("places", payload.places)),
+    ownedByMe,
+    LIMITS.places,
+  );
   // money is two-sided: swap the payer / saver perspective for the receiving device
-  const incomingExpenses: Expense[] = payload.expenses.map((e) => ({
+  const incomingExpenses: Expense[] = take("expenses", payload.expenses).map((e) => ({
     ...e,
     paidBy: e.paidBy === "me" ? "them" : "me",
     split: e.split === "mine" ? "theirs" : e.split === "theirs" ? "mine" : e.split,
     myPercent: e.split === "custom" ? 100 - (e.myPercent ?? 50) : e.myPercent,
   }));
   const expenses = mergeById(state.expenses, incomingExpenses, paidByMe, LIMITS.expenses);
-  const incomingGoals: SavingsGoal[] = payload.goals.map((g) => ({
+  const incomingGoals: SavingsGoal[] = take("goals", payload.goals).map((g) => ({
     ...g,
     savedByMe: g.savedByThem,
     savedByThem: g.savedByMe,
@@ -225,7 +282,10 @@ export function applyShareCode(state: AppState, payload: SharePayload) {
   }));
   const goals = mergeById(state.goals, incomingGoals, neverMine, LIMITS.goals);
 
-  const incomingWatch: WatchEntry[] = payload.watch.map((e) => ({ ...e, owner: "them" }));
+  const incomingWatch: WatchEntry[] = take("watch", payload.watch).map((e) => ({
+    ...e,
+    owner: "them",
+  }));
   const knownWatch = new Set(state.watchEntries.map((e) => e.id));
   const freshWatch = incomingWatch
     .filter((e) => !knownWatch.has(e.id))
@@ -258,26 +318,42 @@ export function applyShareCode(state: AppState, payload: SharePayload) {
         events.added +
         milestones.added +
         places.added +
+        moods.added +
         expenses.added +
         goals.added +
         freshWatch.length,
       updated:
-        events.updated + milestones.updated + places.updated + expenses.updated + goals.updated,
+        events.updated +
+        milestones.updated +
+        places.updated +
+        moods.updated +
+        expenses.updated +
+        goals.updated,
     },
   };
 }
 
 /** What a code contains, for the accept screen preview. */
+/**
+ * What a code contains, for the accept screen.
+ *
+ * Every category the payload can carry is counted, including the ones the old
+ * preview left out entirely — a recipient could otherwise take on a partner's
+ * mood history without it ever being mentioned.
+ */
 export function previewShareCode(payload: SharePayload) {
   return {
     from: payload.from,
     fromZone: payload.fromZone,
     startDate: payload.startDate,
-    events: payload.events.length,
-    milestones: payload.milestones.length,
-    places: payload.places.length,
-    goals: payload.goals.length,
-    expenses: payload.expenses.length,
-    watch: payload.watch.length,
+    counts: {
+      events: payload.events.length,
+      milestones: payload.milestones.length,
+      places: payload.places.length,
+      moods: payload.moods.length,
+      expenses: payload.expenses.length,
+      goals: payload.goals.length,
+      watch: payload.watch.length,
+    } satisfies Record<ShareCategory, number>,
   };
 }

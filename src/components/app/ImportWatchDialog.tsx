@@ -15,8 +15,8 @@ import { useStore } from "@/lib/app/store";
 import {
   WATCH_SERVICES,
   parseWatchFile,
+  parsedWatchId,
   serviceMeta,
-  watchId,
   type ParsedWatchFile,
   type WatchService,
 } from "@/lib/app/watch";
@@ -77,26 +77,42 @@ export function ImportWatchDialog({
   const total = staged.reduce((n, s) => n + s.parsed.entries.length, 0);
 
   const doImport = () => {
+    const importedAt = Date.now();
     let added = 0;
+    let skipped = 0;
     for (const s of staged) {
+      // One counter per file, so identical undated rows get distinct but
+      // reproducible ids.
+      const seen = new Map<string, number>();
       const entries: WatchEntry[] = s.parsed.entries.map((e) => ({
-        id: watchId(s.parsed.service, e.at, e.title, e.detail),
+        id: parsedWatchId(s.parsed.service, e, seen),
         service: s.parsed.service,
         title: e.title,
         detail: e.detail,
         owner: s.owner,
-        at: e.at,
+        // Undated rows sort as of the import; the flag stops the UI claiming
+        // that is when they were watched.
+        at: e.at ?? importedAt,
+        dateUnknown: e.at === null ? true : undefined,
         minutes: e.minutes,
       }));
-      added += importWatch(entries, {
+      const result = importWatch(entries, {
         service: s.parsed.service,
         label: s.fileName,
         owner: s.owner,
       });
+      added += result.added;
+      skipped += result.skipped;
     }
     if (added > 0) {
       toast.success(`${added} item${added === 1 ? "" : "s"} added`, {
-        description: "Your shared viewing dashboard is up to date.",
+        description: skipped
+          ? `${skipped} more didn't fit — your dashboard is at its limit.`
+          : "Your shared viewing dashboard is up to date.",
+      });
+    } else if (skipped > 0) {
+      toast.error("Your dashboard is full", {
+        description: `${skipped} item${skipped === 1 ? "" : "s"} couldn't be added. Remove an older import first.`,
       });
     } else {
       toast("Nothing new", { description: "Those were already on your dashboard." });

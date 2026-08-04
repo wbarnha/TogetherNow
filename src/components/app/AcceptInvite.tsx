@@ -1,19 +1,41 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { CalendarHeart, Check, Heart, MapPin, PiggyBank, Send, Sparkles } from "lucide-react";
+import { Check, Heart, Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useStore } from "@/lib/app/store";
-import { applyShareCode, parseShareCode, previewShareCode } from "@/lib/app/share";
+import {
+  SHARE_CATEGORIES,
+  acceptAll,
+  applyShareCode,
+  parseShareCode,
+  previewShareCode,
+  type AcceptChoices,
+} from "@/lib/app/share";
 import { sendInvite } from "@/lib/app/invite";
+
+/** "a, b and c" — so the confirmation names what was actually taken. */
+function formatList(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
 
 /** Landing experience for the partner who opened an invite link. */
 export function AcceptInvite({ code, onDismiss }: { code: string; onDismiss: () => void }) {
   const { state, setState } = useStore();
   const [name, setName] = useState(state.me.name);
-  const [done, setDone] = useState<null | { added: number; updated: number; from: string }>(null);
+  const [done, setDone] = useState<null | {
+    added: number;
+    updated: number;
+    from: string;
+    categories: string[];
+  }>(null);
+  // Everything on by default, but every category is named and can be dropped
+  // before it lands.
+  const [choices, setChoices] = useState<AcceptChoices>(acceptAll);
 
   const parsed = useMemo(() => {
     try {
@@ -42,14 +64,19 @@ export function AcceptInvite({ code, onDismiss }: { code: string; onDismiss: () 
 
   const accept = () => {
     try {
-      const { state: merged, summary } = applyShareCode(state, parsed.payload!);
+      const { state: merged, summary } = applyShareCode(state, parsed.payload!, choices);
       setState(() => ({
         ...merged,
         onboarded: true,
         me: { ...merged.me, name: name.trim() || merged.me.name },
         inviteFailedAt: null,
       }));
-      setDone({ added: summary.added, updated: summary.updated, from: summary.from });
+      setDone({
+        added: summary.added,
+        updated: summary.updated,
+        from: summary.from,
+        categories: rows.filter((r) => choices[r.key]).map((r) => r.label.toLowerCase()),
+      });
       toast.success(`You're connected with ${summary.from}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "That invite couldn't be merged");
@@ -79,7 +106,9 @@ export function AcceptInvite({ code, onDismiss }: { code: string; onDismiss: () 
             {done.added + done.updated > 0
               ? `${done.added} new and ${done.updated} updated item${
                   done.added + done.updated === 1 ? "" : "s"
-                } are on your phone — plans, big dates and your Together list.`
+                } are on your phone${
+                  done.categories.length ? ` — ${formatList(done.categories)}` : ""
+                }.`
               : "Everything was already up to date."}
           </p>
         </div>
@@ -95,12 +124,12 @@ export function AcceptInvite({ code, onDismiss }: { code: string; onDismiss: () 
     );
   }
 
-  const rows = [
-    { icon: CalendarHeart, label: "Plans", count: preview.events },
-    { icon: Heart, label: "Big dates", count: preview.milestones },
-    { icon: MapPin, label: "Together list ideas", count: preview.places },
-    { icon: PiggyBank, label: "Savings goals", count: preview.goals },
-  ].filter((r) => r.count > 0);
+  // Every category the code actually carries, not a hand-picked four. The
+  // sensitive ones are called out rather than folded in silently.
+  const rows = SHARE_CATEGORIES.map((c) => ({ ...c, count: preview.counts[c.key] })).filter(
+    (r) => r.count > 0,
+  );
+  const nothingChosen = rows.every((r) => !choices[r.key]);
 
   return (
     <div className="space-y-4">
@@ -119,18 +148,36 @@ export function AcceptInvite({ code, onDismiss }: { code: string; onDismiss: () 
         </div>
 
         {rows.length ? (
-          <ul className="space-y-2 text-left">
-            {rows.map((r) => (
-              <li
-                key={r.label}
-                className="flex items-center gap-3 rounded-2xl bg-card px-3 py-2 text-sm"
-              >
-                <r.icon className="size-4 text-primary" />
-                <span className="flex-1">{r.label}</span>
-                <span className="font-medium">{r.count}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-2 text-left">
+            <p className="px-1 text-xs text-muted-foreground">
+              Choose what to bring across. You can turn any of these off.
+            </p>
+            <ul className="space-y-2">
+              {rows.map((r) => (
+                <li
+                  key={r.key}
+                  className="flex items-center gap-3 rounded-2xl bg-card px-3 py-2 text-sm"
+                >
+                  <Checkbox
+                    id={`accept-${r.key}`}
+                    checked={choices[r.key]}
+                    onCheckedChange={(v) =>
+                      setChoices((prev) => ({ ...prev, [r.key]: v === true }))
+                    }
+                  />
+                  <Label htmlFor={`accept-${r.key}`} className="flex-1 cursor-pointer font-normal">
+                    {r.label}
+                    {r.sensitive ? (
+                      <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                        personal
+                      </span>
+                    ) : null}
+                  </Label>
+                  <span className="font-medium">{r.count}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
 
         <div className="space-y-2 text-left">
@@ -143,8 +190,9 @@ export function AcceptInvite({ code, onDismiss }: { code: string; onDismiss: () 
           />
         </div>
 
-        <Button size="lg" className="w-full" onClick={accept}>
-          <Heart className="size-4" /> Connect with {preview.from}
+        <Button size="lg" className="w-full" onClick={accept} disabled={nothingChosen}>
+          <Heart className="size-4" />
+          {nothingChosen ? "Pick at least one thing" : `Connect with ${preview.from}`}
         </Button>
       </div>
       <button
