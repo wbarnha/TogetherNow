@@ -14,6 +14,34 @@ It blocks every iOS route and you will hit it in the first five minutes.
 
 ---
 
+## Install, in short
+
+The long version of each of these is further down. If you have done this kind
+of thing before, this is all you need.
+
+**Android**
+
+1. **Actions** tab → latest **Mobile builds** run → download `android-debug-apk`.
+2. Unzip it, put the `.apk` on the phone, tap it.
+3. When Android objects, tap **Settings** and turn on **Allow from this source**.
+4. Tap the APK again → **Install**.
+
+Or, with the phone plugged in and USB debugging on: `adb install app-debug.apk`.
+
+**iOS**
+
+1. Change the bundle identifier first — see below, it is not optional.
+2. Either open `ios/App/App.xcodeproj` in Xcode, sign in with a free Apple
+   Account, pick your Personal Team, and press **Run** with the phone attached;
+3. Or download the `ios-unsigned-ipa` artifact and re-sign it with Sideloadly
+   or AltStore, which needs no Xcode.
+4. On the phone: trust the certificate **and** enable Developer Mode. They are
+   two different settings and you need both.
+
+Expect to redo step 2 or 3 every 7 days on a free account.
+
+---
+
 ## Android
 
 ### What to download
@@ -215,15 +243,98 @@ optional — and re-running it is safe.
 
 ---
 
+## Updating an install you already have
+
+### Android
+
+Install the new APK over the old one. Nothing else is needed, and your archive
+survives:
+
+```bash
+adb install -r app-debug.apk      # -r = replace, keep the data
+```
+
+Tapping the APK on the phone does the same thing — the installer recognises it
+as an update and offers **Update** rather than Install. The "allow from this
+source" grant you gave earlier still applies, so that prompt should not return
+unless you are installing from a different app than last time.
+
+Three things that turn an update into a reinstall, and a reinstall loses your
+archive:
+
+- **Switching between the debug and release APK.** They are signed with
+  different keys, and Android refuses to replace one with the other:
+  `INSTALL_FAILED_UPDATE_INCOMPATIBLE`. There is no flag for this — the only
+  way through is to uninstall first. Pick one and stay on it.
+- **Going back to an older build.** Android will not install a lower version
+  code over a higher one. `adb install -r -d` allows the downgrade.
+- **Uninstalling "to get a clean copy".** It does what it says.
+
+If you see a dialog asking whether to update from a different source, that is
+Android noticing this app was originally installed by something else. Accepting
+transfers future updates to whatever installed it last.
+
+### iOS
+
+Reinstalling over an existing install keeps your archive, on any route, as long
+as **the bundle identifier and the signing account both stay the same**. iOS
+keys the app's storage to that identity. Change the identifier and you have a
+second, empty copy of the app rather than an updated one — the old one is still
+there with your data in it.
+
+**Xcode route:** rebuild and press **Run** again with the phone attached.
+
+```bash
+git pull
+bun install
+bun run build:mobile
+bunx cap sync ios
+bun run native:config
+```
+
+Then Run. `cap sync` rather than `cap add` — the project already exists.
+
+**Re-signed `.ipa` route:** download the new `ios-unsigned-ipa`, re-sign it the
+same way as before, install over the top.
+
+### Refreshing is not updating
+
+On a free Apple Account these are two different operations and it is easy to
+conflate them:
+
+- **Refreshing** re-signs the build already on the phone, resetting the 7-day
+  clock. AltStore and SideStore do this for you, which is their main reason to
+  exist. The app does not change.
+- **Updating** puts a newer build on the phone. Nothing refreshes you into a
+  new version.
+
+So an app that has stopped launching needs a refresh, not a new download — and
+an app that is running an old version needs a new build, which a refresh will
+never give you.
+
+### Keeping up with changes
+
+There is no update notification, because there is no server to send one. New
+builds appear in the **Actions** tab on every push to `main`; watch the
+repository if you want an email when something lands.
+
+---
+
 ## Your data
 
-The archive lives on the device, in the app's own storage. Two consequences
-worth knowing before you start moving builds around:
+The archive lives on the device, in the app's own storage. There is no account
+and no server, so nothing is backed up anywhere and nothing can be restored
+from anywhere.
 
-- **Uninstalling deletes it.** Android will make you uninstall when you switch
-  between differently-signed builds.
-- **Reinstalling does not restore it.** There is no account and no server; the
-  app has nowhere to restore from.
+The distinction that matters when moving builds around:
+
+- **Installing over an existing copy keeps everything.** That is an update, and
+  it is the normal case — see [Updating an install you already
+  have](#updating-an-install-you-already-have).
+- **Uninstalling deletes the archive**, and installing again afterwards starts
+  empty. Android forces this when you switch between differently-signed builds;
+  on iOS, changing the bundle identifier has the same effect by a different
+  route, since the new identifier gets its own empty storage.
 
 Before replacing a build you care about, open **Share code**, copy your code,
 and keep it somewhere. Merging it back into the fresh install restores what it
