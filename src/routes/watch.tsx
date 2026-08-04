@@ -50,9 +50,13 @@ function WatchPage() {
   const meName = state.me.name || "You";
   const themName = state.them.name || "Them";
 
-  const entries = state.watchEntries ?? [];
+  const entries = state.watchEntries;
   const visible = useMemo(
-    () => entries.filter((e) => filter === ALL || e.service === filter).slice().reverse(),
+    () =>
+      entries
+        .filter((e) => filter === ALL || e.service === filter)
+        .slice()
+        .reverse(),
     [entries, filter],
   );
 
@@ -267,7 +271,10 @@ function WatchPage() {
                     style={{ backgroundColor: `${serviceMeta(e.service).accent}22` }}
                   >
                     {serviceMeta(e.service).kind === "play" ? (
-                      <Gamepad2 className="size-4" style={{ color: serviceMeta(e.service).accent }} />
+                      <Gamepad2
+                        className="size-4"
+                        style={{ color: serviceMeta(e.service).accent }}
+                      />
                     ) : (
                       <Tv className="size-4" style={{ color: serviceMeta(e.service).accent }} />
                     )}
@@ -313,7 +320,7 @@ function WatchPage() {
         </div>
       </section>
 
-      {(state.watchImports ?? []).length > 0 ? (
+      {state.watchImports.length > 0 ? (
         <section className="rounded-3xl bg-card p-4 shadow-sm">
           <h2 className="font-display text-lg">Imported files</h2>
           <ul className="mt-3 space-y-2">

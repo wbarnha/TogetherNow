@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/app/AppShell";
 import { useStore } from "@/lib/app/store";
-import { MESSENGERS } from "@/lib/app/messengers";
+import { MESSENGERS, messengerLink, messengerWebLink } from "@/lib/app/messengers";
 import { clockIn } from "@/lib/app/time";
 import { useNow } from "@/lib/app/store";
 import { History, Settings2, Upload } from "lucide-react";
@@ -80,10 +80,12 @@ function MessagesPage() {
         <div className="grid grid-cols-2 gap-3">
           {configured.map((m) => {
             const handle = (state.them.handles[m.id] ?? "").trim();
+            const deepLink = messengerLink(m, handle);
+            const webLink = messengerWebLink(m, handle);
             return (
               <a
                 key={m.id}
-                href={m.link(handle)}
+                href={deepLink}
                 className="group flex flex-col justify-between rounded-3xl border border-border bg-card p-4 transition-shadow hover:shadow-md"
               >
                 <span
@@ -94,7 +96,7 @@ function MessagesPage() {
                 </span>
                 <span className="block font-medium">{m.name}</span>
                 <span className="block truncate text-xs text-muted-foreground">{handle}</span>
-                {m.webFallback ? (
+                {webLink ? (
                   <span className="mt-2 block text-[11px] text-muted-foreground">
                     App not installed?{" "}
                     <span
@@ -103,11 +105,11 @@ function MessagesPage() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        window.open(m.webFallback!(handle), "_blank", "noopener");
+                        window.open(webLink, "_blank", "noopener,noreferrer");
                       }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter")
-                          window.open(m.webFallback!(handle), "_blank", "noopener");
+                          window.open(webLink, "_blank", "noopener,noreferrer");
                       }}
                       className="cursor-pointer underline"
                     >

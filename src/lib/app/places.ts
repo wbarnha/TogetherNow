@@ -1,3 +1,4 @@
+import { safeHttpUrl } from "./safe-url";
 import type { Owner, Place, PlaceCategory } from "./types";
 
 export type ParsedPlace = {
@@ -27,7 +28,9 @@ export function toPlace(p: ParsedPlace, owner: Owner, source: Place["source"]): 
     name: p.name.trim(),
     address: p.address?.trim() || undefined,
     note: p.note?.trim() || undefined,
-    url: p.url?.trim() || undefined,
+    // A KML `<link href>` or a CSV URL column is attacker-controlled the moment
+    // the file came from anywhere but the user's own export.
+    url: safeHttpUrl(p.url),
     lat: p.lat,
     lng: p.lng,
     owner,
@@ -319,9 +322,16 @@ export function parsePlaces(text: string, fileName?: string): ParsedPlace[] {
   return parsed;
 }
 
-/** Best link for opening a place in the phone's map app. */
+/**
+ * Best link for opening a place in the phone's map app.
+ *
+ * Re-checks the stored URL rather than trusting it: entries saved before the
+ * scheme allowlist existed are still sitting in people's localStorage, and this
+ * value goes straight into an `href`.
+ */
 export function mapLink(place: Place) {
-  if (place.url) return place.url;
+  const saved = safeHttpUrl(place.url);
+  if (saved) return saved;
   if (place.lat != null && place.lng != null) {
     return `https://maps.google.com/?q=${place.lat},${place.lng}`;
   }
@@ -416,21 +426,52 @@ const NOISE_WORDS = new Set([
   "llc",
 ]);
 
-/** Lowercase, accent-free, punctuation-free comparison form of a place name. */
-export function normalizeName(raw: string | undefined) {
-  return (raw ?? "")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+/**
+ * Normalising a name costs an NFKD pass plus four regex rewrites, and matching
+ * runs it on both sides of every comparison. Names repeat heavily inside a
+ * single import, so memoising turns that into one pass per distinct name.
+ */
+const MEMO_LIMIT = 20_000;
+const normalized = new Map<string, string>();
+const tokenized = new Map<string, Set<string>>();
+
+function memo<V>(cache: Map<string, V>, key: string, compute: () => V): V {
+  const hit = cache.get(key);
+  if (hit !== undefined) return hit;
+  const value = compute();
+  // A plain cap rather than an LRU: these caches only need to survive one
+  // import, and dropping everything is cheaper than tracking recency.
+  if (cache.size >= MEMO_LIMIT) cache.clear();
+  cache.set(key, value);
+  return value;
 }
 
-function nameTokens(raw: string | undefined) {
-  return normalizeName(raw)
-    .split(" ")
-    .filter((t) => t.length > 1 && !NOISE_WORDS.has(t));
+/** Lowercase, accent-free, punctuation-free comparison form of a place name. */
+export function normalizeName(raw: string | undefined) {
+  const key = raw ?? "";
+  return memo(normalized, key, () =>
+    key
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim(),
+  );
+}
+
+function nameTokens(raw: string | undefined): Set<string> {
+  const key = raw ?? "";
+  return memo(
+    tokenized,
+    key,
+    () =>
+      new Set(
+        normalizeName(key)
+          .split(" ")
+          .filter((t) => t.length > 1 && !NOISE_WORDS.has(t)),
+      ),
+  );
 }
 
 /** 0-1 similarity between two place names (token overlap, containment aware). */
@@ -439,14 +480,16 @@ export function nameSimilarity(a: string | undefined, b: string | undefined) {
   const nb = normalizeName(b);
   if (!na || !nb) return 0;
   if (na === nb) return 1;
-  const ta = new Set(nameTokens(a));
-  const tb = new Set(nameTokens(b));
+  const ta = nameTokens(a);
+  const tb = nameTokens(b);
   if (ta.size === 0 || tb.size === 0) return 0;
+  // Iterate the smaller set: `has` is O(1) either way, but the loop is not.
+  const [small, large] = ta.size <= tb.size ? [ta, tb] : [tb, ta];
   let shared = 0;
-  for (const t of ta) if (tb.has(t)) shared++;
+  for (const t of small) if (large.has(t)) shared++;
   const union = ta.size + tb.size - shared;
   const jaccard = shared / union;
-  const containment = shared / Math.min(ta.size, tb.size);
+  const containment = shared / small.size;
   return Math.max(jaccard, containment * 0.95);
 }
 
@@ -488,14 +531,17 @@ export function isSamePlace(a: PlaceLike, b: PlaceLike) {
   if (ua && ua === ub) return true;
 
   const dist = distanceMeters(a, b);
-  const score = nameSimilarity(a.name, b.name);
 
+  // Two entries with coordinates further apart than the match radius are
+  // different places whatever they are called, so decide on distance before
+  // paying for a name comparison.
   if (dist != null) {
     if (dist <= 25) return true; // same pin, whatever it is called
-    if (dist <= COORD_MATCH_METRES && score >= 0.5) return true;
     if (dist > COORD_MATCH_METRES) return false; // clearly different locations
+    return nameSimilarity(a.name, b.name) >= 0.5;
   }
 
+  const score = nameSimilarity(a.name, b.name);
   if (score >= NAME_MATCH_SCORE) {
     const aa = normalizeName(a.address);
     const bb = normalizeName(b.address);
@@ -523,21 +569,201 @@ export function mergeParsed(a: ParsedPlace, b: ParsedPlace): ParsedPlace {
   };
 }
 
-/** Collapse duplicates inside a freshly parsed list. */
-export function dedupeParsed(list: ParsedPlace[]) {
-  const out: ParsedPlace[] = [];
-  let merged = 0;
-  for (const p of list) {
-    const i = out.findIndex((x) => isSamePlace(x, p));
-    if (i >= 0) {
-      out[i] = mergeParsed(out[i]!, p);
-      merged++;
-    } else out.push(p);
-  }
-  return { places: out, merged };
+/* ----------------------------- match index ------------------------------ */
+
+/**
+ * A lookup that answers "have I already got this place?" without comparing
+ * against everything.
+ *
+ * Matching two places is not cheap — `nameSimilarity` normalises both names
+ * and intersects their token sets — and both callers used to run it against
+ * every candidate: deduping an import was O(n²) and checking it against the
+ * saved list was O(n·m). A 2,000-pin Google Takeout export is four million of
+ * those comparisons, which is a frozen tab.
+ *
+ * The index narrows the field first, along the axes {@link isSamePlace} can
+ * actually match on, then confirms every survivor with the unchanged
+ * `isSamePlace` so results are identical to a full scan:
+ *
+ *   1. the normalised link, which is an outright match;
+ *   2. a grid of geographic cells, since two entries with coordinates further
+ *      apart than {@link COORD_MATCH_METRES} never match;
+ *   3. name tokens — but only against entries the name rule can still reach.
+ *      When the candidate has coordinates, any entry that also has them has
+ *      already been decided by distance, so the name index only has to cover
+ *      entries with no coordinates at all. That is what keeps a list of
+ *      near-identical names (chains, or a lazily-labelled export) from
+ *      collapsing back into a quadratic scan.
+ */
+
+/** ~222 m of latitude — comfortably wider than the coordinate match radius. */
+const CELL_LAT = 0.002;
+/** Beyond this latitude the longitude grid degenerates; fall back to bands. */
+const POLAR_LIMIT = 85;
+/** Probe both schemes within this margin so nothing falls between them. */
+const POLAR_MARGIN = 0.01;
+
+function lngStep(lat: number) {
+  // Widen the longitude step as meridians converge, so a cell stays at least
+  // CELL_LAT wide on the ground at this latitude.
+  return CELL_LAT / Math.max(0.05, Math.cos((lat * Math.PI) / 180));
 }
 
-/** Find an already-saved idea that matches a parsed place. */
+/** The single cell an entry is filed under. */
+function homeCell(lat: number, lng: number): string {
+  const latCell = Math.floor(lat / CELL_LAT);
+  if (Math.abs(lat) > POLAR_LIMIT) return `p:${latCell}`;
+  return `${latCell}:${Math.floor(lng / lngStep(lat))}`;
+}
+
+/** Every cell that could hold a match for this point. */
+function probeCells(lat: number, lng: number): string[] {
+  const latCell = Math.floor(lat / CELL_LAT);
+  const keys: string[] = [];
+  if (Math.abs(lat) > POLAR_LIMIT - POLAR_MARGIN) {
+    for (let dr = -1; dr <= 1; dr++) keys.push(`p:${latCell + dr}`);
+  }
+  if (Math.abs(lat) < POLAR_LIMIT + POLAR_MARGIN) {
+    const lngCell = Math.floor(lng / lngStep(lat));
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) keys.push(`${latCell + dr}:${lngCell + dc}`);
+    }
+  }
+  return keys;
+}
+
+const hasCoords = (p: PlaceLike) => p.lat != null && p.lng != null;
+
+export type PlaceIndex<T extends PlaceLike> = {
+  /** The earliest-added entry matching `candidate`, or undefined. */
+  find(candidate: PlaceLike): T | undefined;
+  add(item: T): void;
+  /** Replace the entry at `position` (as returned by {@link positionOf}). */
+  replace(position: number, item: T): void;
+  positionOf(item: T): number;
+  items(): T[];
+};
+
+export function createPlaceIndex<T extends PlaceLike>(initial: T[] = []): PlaceIndex<T> {
+  const entries: T[] = [];
+  const byUrl = new Map<string, number[]>();
+  const byCell = new Map<string, number[]>();
+  // Two name indexes: one over every entry, one over just the entries with no
+  // coordinates. See the note above on why the second is the common case.
+  const byName = new Map<string, number[]>();
+  const byToken = new Map<string, number[]>();
+  const byNameFlat = new Map<string, number[]>();
+  const byTokenFlat = new Map<string, number[]>();
+
+  const push = (map: Map<string, number[]>, key: string, at: number) => {
+    const bucket = map.get(key);
+    if (bucket) bucket.push(at);
+    else map.set(key, [at]);
+  };
+
+  function index(item: T, at: number) {
+    const url = normalizedUrl(item.url);
+    if (url) push(byUrl, url, at);
+
+    const located = hasCoords(item);
+    if (located) push(byCell, homeCell(item.lat!, item.lng!), at);
+
+    const name = normalizeName(item.name);
+    if (name) {
+      push(byName, name, at);
+      if (!located) push(byNameFlat, name, at);
+    }
+    for (const token of nameTokens(item.name)) {
+      push(byToken, token, at);
+      if (!located) push(byTokenFlat, token, at);
+    }
+  }
+
+  function add(item: T) {
+    entries.push(item);
+    index(item, entries.length - 1);
+  }
+
+  for (const item of initial) add(item);
+
+  return {
+    add,
+    items: () => entries,
+    positionOf: (item) => entries.indexOf(item),
+    replace(position, item) {
+      // Re-index rather than patch: a merged entry only ever gains fields, so
+      // the extra postings are additive and stale ones still point at a live
+      // entry that `isSamePlace` will re-check anyway.
+      entries[position] = item;
+      index(item, position);
+    },
+    find(candidate) {
+      const seen = new Set<number>();
+      const collect = (bucket: number[] | undefined) => {
+        if (bucket) for (const at of bucket) seen.add(at);
+      };
+
+      collect(byUrl.get(normalizedUrl(candidate.url)));
+
+      const located = hasCoords(candidate);
+      if (located) {
+        for (const key of probeCells(candidate.lat!, candidate.lng!)) collect(byCell.get(key));
+      }
+
+      // A located candidate can only match an unlocated entry by name; an
+      // unlocated one has no distance to go on, so it must consider everything.
+      const names = located ? byNameFlat : byName;
+      const tokens = located ? byTokenFlat : byToken;
+      collect(names.get(normalizeName(candidate.name)));
+      for (const token of nameTokens(candidate.name)) collect(tokens.get(token));
+
+      let best: number | undefined;
+      for (const at of seen) {
+        if (best !== undefined && at >= best) continue;
+        const entry = entries[at];
+        if (entry && isSamePlace(entry, candidate)) best = at;
+      }
+      return best === undefined ? undefined : entries[best];
+    },
+  };
+}
+
+/** Collapse duplicates inside a freshly parsed list. */
+export function dedupeParsed(list: ParsedPlace[]) {
+  const index = createPlaceIndex<ParsedPlace>();
+  let merged = 0;
+  for (const p of list) {
+    const hit = index.find(p);
+    if (hit) {
+      index.replace(index.positionOf(hit), mergeParsed(hit, p));
+      merged++;
+    } else index.add(p);
+  }
+  return { places: index.items(), merged };
+}
+
+/**
+ * Find an already-saved idea that matches a parsed place.
+ *
+ * Building the index costs a pass over `existing`, so prefer
+ * {@link matchExistingPlaces} when checking a whole import at once.
+ */
 export function findExistingPlace(p: ParsedPlace, existing: Place[]) {
-  return existing.find((x) => x.id === placeId(p) || isSamePlace(x, p));
+  return existing.find((x) => x.id === placeId(p)) ?? createPlaceIndex(existing).find(p);
+}
+
+/**
+ * Match a whole parsed batch against the saved list in one pass, keyed by
+ * {@link placeId}. One index serves every candidate.
+ */
+export function matchExistingPlaces(parsed: ParsedPlace[], existing: Place[]): Map<string, string> {
+  const index = createPlaceIndex(existing);
+  const byId = new Map(existing.map((p) => [p.id, p]));
+  const out = new Map<string, string>();
+  for (const p of parsed) {
+    const id = placeId(p);
+    const hit = byId.get(id) ?? index.find(p);
+    if (hit) out.set(id, hit.id);
+  }
+  return out;
 }

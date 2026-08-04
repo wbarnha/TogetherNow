@@ -14,12 +14,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   dedupeParsed,
-  findExistingPlace,
+  matchExistingPlaces,
   parsePlaces,
   placeId,
   toPlace,
   type ParsedPlace,
 } from "@/lib/app/places";
+import { boundPaste, importErrorMessage, readImportFile } from "@/lib/app/import-file";
 import { useStore } from "@/lib/app/store";
 import type { Owner, Place } from "@/lib/app/types";
 import { cn } from "@/lib/utils";
@@ -64,14 +65,10 @@ export function ImportPlacesDialog({
   const places = parsedResult.places;
 
   /** Ideas already on the list, matched by link, coordinates or name. */
-  const existingMatches = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const p of places) {
-      const hit = findExistingPlace(p, state.places);
-      if (hit) map.set(placeId(p), hit.id);
-    }
-    return map;
-  }, [places, state.places]);
+  const existingMatches = useMemo(
+    () => matchExistingPlaces(places, state.places),
+    [places, state.places],
+  );
 
   const freshIds = useMemo(
     () => places.map(placeId).filter((id) => !existingMatches.has(id)),
@@ -88,9 +85,8 @@ export function ImportPlacesDialog({
         return { places: [] as ParsedPlace[], merged: 0 };
       }
     })();
-    setSelected(
-      new Set(result.places.filter((p) => !findExistingPlace(p, state.places)).map(placeId)),
-    );
+    const known = matchExistingPlaces(result.places, state.places);
+    setSelected(new Set(result.places.map(placeId).filter((id) => !known.has(id))));
     if (result.places.length === 0) toast.error("No places found in that file");
     else if (result.merged > 0) {
       toast.success(
@@ -170,9 +166,15 @@ export function ImportPlacesDialog({
               className="hidden"
               onChange={async (e) => {
                 const file = e.target.files?.[0];
-                if (!file) return;
-                load(await file.text(), file.name);
                 e.target.value = "";
+                if (!file) return;
+                try {
+                  load(await readImportFile(file), file.name);
+                } catch (err) {
+                  toast.error(`Couldn't open ${file.name}`, {
+                    description: importErrorMessage(err, "The file couldn't be read."),
+                  });
+                }
               }}
             />
             <Button
@@ -199,7 +201,7 @@ export function ImportPlacesDialog({
               <Button
                 className="w-full rounded-2xl"
                 disabled={!pasted.trim()}
-                onClick={() => load(pasted)}
+                onClick={() => load(boundPaste(pasted))}
               >
                 Read pasted list
               </Button>

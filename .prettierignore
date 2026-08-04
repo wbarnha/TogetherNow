@@ -6,3 +6,7 @@ pnpm-lock.yaml
 package-lock.json
 bun.lock
 routeTree.gen.ts
+
+# Lovable-managed files — reformatting them fights the editor's own sync
+.lovable
+AGENTS.md

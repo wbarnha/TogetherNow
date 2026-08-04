@@ -1,0 +1,116 @@
+name: Security
+
+# The repository shipped with no security scanning of any kind. These checks
+# are cheap and catch the two classes of problem this app is most exposed to:
+# a dependency with a known advisory, and an injection sink in code that
+# handles share codes and imported files.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Advisories are published against code that has not changed, so re-run
+    # weekly rather than only on commits. Monday 06:17 UTC — off the hour, so
+    # this is not queued behind every other repository's midnight cron.
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BUN_VERSION: "1.3.11"
+
+jobs:
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Known advisories
+        run: bun audit --audit-level=high
+
+      # `bun install --frozen-lockfile` already fails on a lockfile that does
+      # not satisfy package.json, but it will happily install from whatever
+      # registry the lockfile names. This repo's lockfile once pinned every
+      # tarball to a private vendor mirror, which nobody outside that vendor
+      # could fetch and nobody could audit.
+      - name: Lockfile resolves to the public registry
+        run: |
+          unexpected=$(grep -oE 'https://[a-zA-Z0-9.-]+/' bun.lock | sort -u \
+            | grep -v '^https://registry\.npmjs\.org/$' || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error file=bun.lock::Lockfile resolves packages from outside the public npm registry:"
+            echo "$unexpected"
+            exit 1
+          fi
+          echo "All packages resolve from registry.npmjs.org."
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # CodeQL needs GitHub Advanced Security on a private repository. Rather
+    # than leaving a permanently red job, this is gated on a repository
+    # variable: set ENABLE_CODEQL=true (Settings → Secrets and variables →
+    # Actions → Variables) once the repo is public or Advanced Security is on.
+    if: vars.ENABLE_CODEQL == 'true'
+    permissions:
+      contents: read
+      security-events: write
+      # Required for CodeQL on a private repository.
+      actions: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@e60ea984bd3baa95954f2856bcf24f9eaba46637 # v3
+        with:
+          languages: javascript-typescript
+          # The extended suite includes the DOM XSS and prototype-pollution
+          # queries that matter for code parsing untrusted share codes.
+          queries: security-extended
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@e60ea984bd3baa95954f2856bcf24f9eaba46637 # v3
+        with:
+          category: /language:javascript-typescript
+
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Same gate as CodeQL: the dependency graph API needs Advanced Security on
+    # a private repository.
+    if: github.event_name == 'pull_request' && vars.ENABLE_CODEQL == 'true'
+    permissions:
+      contents: read
+      # Only so the action can post its summary on the pull request.
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure

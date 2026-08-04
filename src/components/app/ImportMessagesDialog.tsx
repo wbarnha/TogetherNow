@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { importErrorMessage, readImportFile } from "@/lib/app/import-file";
 import { useStore } from "@/lib/app/store";
 import {
   CHAT_SOURCES,
@@ -47,7 +48,7 @@ export function ImportMessagesDialog({
     const next: Staged[] = [];
     for (const file of Array.from(files)) {
       try {
-        const text = await file.text();
+        const text = await readImportFile(file);
         const parsed = parseChatExport(text, file.name, state.me.name || "Me");
         if (!parsed) {
           toast.error(`Couldn't read ${file.name}`, {
@@ -60,8 +61,10 @@ export function ImportMessagesDialog({
           parsed,
           owners: guessOwners(parsed, state.me.name, state.them.name),
         });
-      } catch {
-        toast.error(`Couldn't open ${file.name}`);
+      } catch (err) {
+        toast.error(`Couldn't open ${file.name}`, {
+          description: importErrorMessage(err, "The file couldn't be read."),
+        });
       }
     }
     setStaged((prev) => [...prev, ...next]);
@@ -162,7 +165,10 @@ export function ImportMessagesDialog({
           ) : null}
 
           {staged.map((s) => (
-            <div key={s.fileName + s.parsed.messages.length} className="space-y-3 rounded-2xl border border-border bg-card p-4">
+            <div
+              key={s.fileName + s.parsed.messages.length}
+              className="space-y-3 rounded-2xl border border-border bg-card p-4"
+            >
               <div>
                 <p className="truncate text-sm font-medium">{s.fileName}</p>
                 <p className="text-xs text-muted-foreground">

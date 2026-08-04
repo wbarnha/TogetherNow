@@ -50,7 +50,7 @@ const STALE_MS = 7 * 24 * 60 * 60 * 1000;
 function SyncPage() {
   const { state, setState, hydrated } = useStore();
   const [importOpen, setImportOpen] = useState(false);
-  const sources = state.calendarSources ?? [];
+  const sources = state.calendarSources;
   const connected = state.pairedAt != null;
   const stale =
     connected && (!state.lastReceivedAt || Date.now() - state.lastReceivedAt > STALE_MS);
@@ -59,7 +59,10 @@ function SyncPage() {
   const on = SHARING_ITEMS.filter((i) => state.sharing[i.key]);
 
   const removeSource = (id: string) => {
-    setState((p) => ({ ...p, calendarSources: (p.calendarSources ?? []).filter((s) => s.id !== id) }));
+    setState((p) => ({
+      ...p,
+      calendarSources: p.calendarSources.filter((s) => s.id !== id),
+    }));
     toast.success("Calendar unlinked", {
       description: "Events already imported stay on your calendar.",
     });
@@ -97,11 +100,7 @@ function SyncPage() {
       <section className="space-y-3 rounded-3xl border border-border bg-card p-5">
         <div className="flex items-start gap-3">
           <span
-            className={
-              stale || !connected
-                ? "mt-0.5 text-muted-foreground"
-                : "mt-0.5 text-primary"
-            }
+            className={stale || !connected ? "mt-0.5 text-muted-foreground" : "mt-0.5 text-primary"}
           >
             {stale || !connected ? (
               <TriangleAlert className="size-5" />

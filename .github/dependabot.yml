@@ -1,0 +1,37 @@
+version: 2
+
+# The repository had no automated dependency updates at all, so a published
+# advisory would sit unnoticed until someone happened to run an audit.
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 5
+    groups:
+      # One PR per ecosystem rather than thirty. Patch and minor bumps are
+      # reviewed together; a major bump still gets its own PR.
+      radix:
+        patterns: ["@radix-ui/*"]
+        update-types: ["minor", "patch"]
+      tanstack:
+        patterns: ["@tanstack/*"]
+        update-types: ["minor", "patch"]
+      capacitor:
+        patterns: ["@capacitor/*"]
+        update-types: ["minor", "patch"]
+      dev-tooling:
+        patterns:
+          ["eslint*", "@eslint/*", "typescript-eslint", "prettier*", "vitest", "vite", "typescript"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    # Workflows pin actions by commit SHA, which nothing else will ever update.
+    open-pull-requests-limit: 5

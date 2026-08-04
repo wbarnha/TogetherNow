@@ -66,10 +66,13 @@ describe("chat export parsing", () => {
   });
 
   it("auto-detects the format", () => {
-    expect(parseChatExport('{"messages":[{"sender_name":"Ada","timestamp_ms":1,"content":"x"}]}')?.source).toBe(
-      "instagram",
+    expect(
+      parseChatExport('{"messages":[{"sender_name":"Ada","timestamp_ms":1,"content":"x"}]}')
+        ?.source,
+    ).toBe("instagram");
+    expect(parseChatExport("Jan 02, 2026  9:15:00 AM\nMe\nhey", "chat.txt")?.source).toBe(
+      "imessage",
     );
-    expect(parseChatExport("Jan 02, 2026  9:15:00 AM\nMe\nhey", "chat.txt")?.source).toBe("imessage");
     expect(parseChatExport("   ")).toBeNull();
   });
 

@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildMilestoneReminders,
-  defaultLeads,
-  reminderBody,
-} from "../milestone-reminders";
+import { buildMilestoneReminders, defaultLeads, reminderBody } from "../milestone-reminders";
 import { initialState } from "../types";
 import type { AppState, Milestone } from "../types";
 

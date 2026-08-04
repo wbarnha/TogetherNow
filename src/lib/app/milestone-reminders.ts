@@ -31,10 +31,7 @@ function occurrencesFor(m: Milestone, from: Date): Date[] {
   const [y, mo, d] = m.date.split("-").map(Number);
   if (!m.recurring) return [new Date(y ?? 1970, (mo ?? 1) - 1, d ?? 1)];
   const base = startOfLocalDay(from).getFullYear();
-  return [
-    new Date(base, (mo ?? 1) - 1, d ?? 1),
-    new Date(base + 1, (mo ?? 1) - 1, d ?? 1),
-  ];
+  return [new Date(base, (mo ?? 1) - 1, d ?? 1), new Date(base + 1, (mo ?? 1) - 1, d ?? 1)];
 }
 
 /** Deterministic small positive int from a string, so ids survive reloads. */
@@ -57,8 +54,7 @@ function yearsAt(m: Milestone, occurrence: Date) {
 
 export function reminderBody(m: Milestone, lead: number, occurrence: Date) {
   const years = yearsAt(m, occurrence);
-  const when =
-    lead === 0 ? "is today" : lead === 1 ? "is tomorrow" : `is in ${lead} days`;
+  const when = lead === 0 ? "is today" : lead === 1 ? "is tomorrow" : `is in ${lead} days`;
   if (m.kind === "birthday") {
     return years ? `${m.title} ${when} — turning ${years}.` : `${m.title} ${when}.`;
   }

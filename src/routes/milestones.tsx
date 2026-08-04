@@ -144,9 +144,7 @@ function MilestonesPage() {
               className="flex items-center justify-between rounded-2xl bg-muted/40 px-3 py-2 text-xs"
             >
               <span className="truncate pr-2">{r.body}</span>
-              <span className="shrink-0 text-muted-foreground">
-                {format(r.at, "d MMM, h a")}
-              </span>
+              <span className="shrink-0 text-muted-foreground">{format(r.at, "d MMM, h a")}</span>
             </div>
           ))}
         </section>

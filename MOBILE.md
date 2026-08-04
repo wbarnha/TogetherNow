@@ -40,6 +40,7 @@ selected under Signing & Capabilities.
 
 The app also works as an installable web app. Open the published URL on your
 phone and use Share → Add to Home Screen (iOS) or the install prompt (Android).
+
 ## Mood widgets (iOS & Android)
 
 The app writes a small JSON snapshot (both moods, streak, next plan) through
@@ -54,14 +55,16 @@ Capacitor Preferences, so the native widgets read it locally — no backend.
   logs as today's check-in.
 
 ### iOS
+
 1. `npx cap add ios && npx cap sync ios && npx cap open ios`
 2. File > New > Target > **Widget Extension** (name it `TogetherNowWidget`, uncheck Live Activity).
 3. Replace the generated Swift file with `native-widgets/ios/TogetherNowWidget.swift`.
 4. Signing & Capabilities: add **App Groups** → `group.app.lovable.togethernow`
-   to *both* the app target and the widget target.
+   to _both_ the app target and the widget target.
 5. In `Info.plist` of the app target add a URL scheme `togethernow`.
 
 ### Android
+
 1. `npx cap add android && npx cap sync android && npx cap open android`
 2. Add Glance to `android/app/build.gradle`:
    `implementation "androidx.glance:glance-appwidget:1.1.1"`

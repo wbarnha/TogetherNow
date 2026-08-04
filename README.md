@@ -17,37 +17,73 @@ exported as `.ics` / `.csv` files.
 ## Quick start (web)
 
 ```sh
-git clone https://github.com/wbarnha/TogetherNow.git
-cd TogetherNow
+git clone https://github.com/wbarnha/close-forever.git
+cd close-forever
 bun install
 bun run dev            # http://localhost:8080
 ```
 
 Other scripts:
 
-| Command | What it does |
-| --- | --- |
-| `bun run build` | Production build into `.output/public` |
-| `bun run lint` | ESLint |
-| `bun run typecheck` | `tsc --noEmit` |
-| `bun run test` | Vitest unit tests |
+| Command                | What it does                                        |
+| ---------------------- | --------------------------------------------------- |
+| `bun run build`        | Production build into `.output`                     |
+| `bun run build:mobile` | Same, plus the static shell the Capacitor apps load |
+| `bun run lint`         | ESLint                                              |
+| `bun run format:check` | Prettier, check only (`bun run format` writes)      |
+| `bun run typecheck`    | `tsc --noEmit`                                      |
+| `bun run test`         | Vitest unit tests                                   |
 
-CI runs lint → typecheck → test → build on every push and pull request
-(`.github/workflows/ci.yml`).
+### What CI checks
+
+Lint, typecheck, test and build run as **independent jobs**
+(`.github/workflows/ci.yml`), so one failure does not hide the rest. The build
+job also reports bundle sizes in the run summary and fails if the client bundle
+picks up an outbound origin nobody reviewed.
+
+`.github/workflows/security.yml` runs a dependency audit and a lockfile-registry
+check on every push and weekly on a schedule. It also carries CodeQL and
+dependency-review jobs, gated behind an `ENABLE_CODEQL` repository variable —
+both need GitHub Advanced Security, which a private repository does not have by
+default. Set the variable to `true` (Settings → Secrets and variables → Actions
+→ Variables) once the repository is public or Advanced Security is enabled.
+
+---
+
+## Privacy and security posture
+
+The app's promise is that nothing leaves the device, so the build enforces it:
+
+- **No third-party requests.** Fonts are self-hosted (`src/fonts.css`,
+  `public/fonts/`). The only outbound call the app can make is the optional
+  location search against OpenStreetMap's Nominatim, plus map tiles on the Ideas
+  map — both only when you use those features.
+- **A nonce-based Content-Security-Policy** on every response, with
+  `connect-src` limited to this origin and the geocoder, so injected script has
+  nowhere to send the archive. See `src/lib/security.ts`.
+- **Everything that comes in from outside is validated** before it reaches
+  React state or storage — share codes, invite links, imported files, and
+  whatever is already in localStorage. See `src/lib/app/validate.ts` and
+  `src/lib/app/safe-url.ts`.
+- **Invite links carry the share code in the URL fragment**, never the query
+  string, so the payload is not sent to any server or logged along the way.
 
 ---
 
 ## Prerequisites for native builds
 
-| | iOS | Android |
-| --- | --- | --- |
-| OS | macOS 13+ | macOS, Windows, or Linux |
-| Tooling | Xcode 15+ and Xcode Command Line Tools | Android Studio (Hedgehog or newer) |
-| Extra | CocoaPods (`sudo gem install cocoapods`) | JDK 21 + Android SDK 34 (installed via Android Studio) |
-| Device | Free Apple ID for on-device runs | USB debugging enabled, or an emulator |
+|         | iOS                                      | Android                                                |
+| ------- | ---------------------------------------- | ------------------------------------------------------ |
+| OS      | macOS 13+                                | macOS, Windows, or Linux                               |
+| Tooling | Xcode 15+ and Xcode Command Line Tools   | Android Studio (Hedgehog or newer)                     |
+| Extra   | CocoaPods (`sudo gem install cocoapods`) | JDK 21 + Android SDK 34 (installed via Android Studio) |
+| Device  | Free Apple ID for on-device runs         | USB debugging enabled, or an emulator                  |
 
-Both platforms also need `bun install` and one successful `bun run build` first —
-Capacitor copies the built web output from `.output/public`.
+Both platforms also need `bun install` and one successful **`bun run build:mobile`**
+first. Use that rather than `bun run build`: a phone has no server to render
+into, so the mobile build additionally writes the static `index.html` shell that
+Capacitor copies out of `.output/public`. A plain SSR build leaves that directory
+with no entry point and the native app opens blank.
 
 ---
 
@@ -55,7 +91,7 @@ Capacitor copies the built web output from `.output/public`.
 
 ```sh
 bun install
-bun run build
+bun run build:mobile
 bunx cap add ios          # one time only
 bunx cap sync ios
 bunx cap open ios         # opens Xcode
@@ -64,7 +100,7 @@ bunx cap open ios         # opens Xcode
 In Xcode:
 
 1. Select the **App** target → **Signing & Capabilities**.
-2. Pick your Apple ID under *Team* and set a unique bundle identifier if
+2. Pick your Apple ID under _Team_ and set a unique bundle identifier if
    `app.lovable.togethernow` is taken.
 3. Choose your iPhone or a simulator in the toolbar and press **Run** (⌘R).
 
@@ -83,7 +119,7 @@ xcodebuild -workspace App.xcworkspace -scheme App \
 
 ```sh
 bun install
-bun run build
+bun run build:mobile
 bunx cap add android      # one time only
 bunx cap sync android
 bunx cap open android     # opens Android Studio
@@ -107,7 +143,7 @@ Install it on a connected phone with `adb install -r app/build/outputs/apk/debug
 ## After every code change
 
 ```sh
-bun run build && bunx cap sync
+bun run build:mobile && bunx cap sync
 ```
 
 Then re-run from Xcode / Android Studio. `cap sync` copies the web build and
@@ -130,11 +166,12 @@ your phone and use **Share → Add to Home Screen** (iOS) or the install prompt
 
 ## Troubleshooting
 
-- **`cap sync` says the web directory is missing** — run `bun run build` first;
-  `webDir` is `.output/public`.
+- **`cap sync` says the web directory is missing, or the app opens blank** —
+  run `bun run build:mobile` (not `bun run build`); `webDir` is
+  `.output/public`, and only the mobile build puts an `index.html` there.
 - **Pod install fails on iOS** — `cd ios/App && pod repo update && pod install`.
-- **Gradle can't find a JDK** — set Java 21 under *Settings → Build Tools →
-  Gradle → Gradle JDK* in Android Studio.
+- **Gradle can't find a JDK** — set Java 21 under _Settings → Build Tools →
+  Gradle → Gradle JDK_ in Android Studio.
 - **Notifications never appear** — they are scheduled on-device with
   `@capacitor/local-notifications` and are skipped in a desktop browser; allow
   notifications when the app first asks.
