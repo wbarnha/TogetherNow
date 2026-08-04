@@ -179,6 +179,24 @@ function xmlDoc(text: string) {
 }
 
 /** Google My Maps / saved-list KML export. */
+/**
+ * Plain text out of a KML `<description>`, which is HTML in practice.
+ *
+ * Exported because it is the only part of the KML path that does not need a
+ * DOM, and it is the part worth testing: `[^<>]` here was `[^>]`, and with
+ * only `>` excluded every `<` in a description that never closes one rescans
+ * to the end of the string. That is quadratic — 256 KB of "<" took 46 seconds,
+ * on a file the importer will accept up to 32 MB of. Stopping at the next `<`
+ * makes the work linear and strips real tags identically, since a well-formed
+ * tag never contains `<`.
+ */
+export function stripMarkup(text: string): string {
+  return text
+    .replace(/<[^<>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function parsePlacesKml(text: string): ParsedPlace[] {
   const doc = xmlDoc(text);
   if (!doc) return [];
@@ -192,12 +210,7 @@ export function parsePlacesKml(text: string): ParsedPlace[] {
     out.push({
       name,
       address: pm.getElementsByTagName("address")[0]?.textContent?.trim() || undefined,
-      note: desc
-        ? desc
-            .replace(/<[^>]*>/g, " ")
-            .replace(/\s+/g, " ")
-            .trim()
-        : undefined,
+      note: desc ? stripMarkup(desc) || undefined : undefined,
       lat: Number.isFinite(lat) ? lat : undefined,
       lng: Number.isFinite(lng) ? lng : undefined,
     });

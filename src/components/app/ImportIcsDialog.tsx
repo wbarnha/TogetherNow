@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { SampleFileLink } from "@/components/app/SampleFileLink";
 import { boundPaste, importErrorMessage, readImportFile } from "@/lib/app/import-file";
 import { parseIcs, toPlanEvent, type ParsedIcsEvent } from "@/lib/app/ics";
 import { icsEventId } from "@/lib/app/ics";
@@ -170,6 +171,10 @@ export function ImportIcsDialog({
             <Button className="w-full" onClick={() => fileRef.current?.click()}>
               <Upload className="size-4" /> Choose .ics file
             </Button>
+            <SampleFileLink
+              file="together-now-sample-calendar.ics"
+              label="Download a sample calendar"
+            />
 
             <div className="space-y-2">
               <Label htmlFor="ics-paste">Or paste the calendar text</Label>

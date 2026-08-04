@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { SampleFileLink } from "@/components/app/SampleFileLink";
 import { importErrorMessage, readImportFile } from "@/lib/app/import-file";
 import { useStore } from "@/lib/app/store";
 import {
@@ -157,6 +158,10 @@ export function ImportWatchDialog({
             {busy ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
             Choose export files
           </Button>
+          <SampleFileLink
+            file="together-now-sample-watch-history.csv"
+            label="Download a sample history"
+          />
 
           <ul className="space-y-2 rounded-2xl bg-muted/50 p-3 text-xs text-muted-foreground">
             {WATCH_SERVICES.filter((s) => s.id !== "other").map((s) => (

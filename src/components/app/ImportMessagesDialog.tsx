@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { SampleFileLink } from "@/components/app/SampleFileLink";
 import { importErrorMessage, readImportFile } from "@/lib/app/import-file";
 import { useStore } from "@/lib/app/store";
 import {
@@ -150,6 +151,10 @@ export function ImportMessagesDialog({
             {busy ? <Loader2 className="size-5 animate-spin" /> : <Upload className="size-5" />}
             Choose export files
           </Button>
+          <SampleFileLink
+            file="together-now-sample-messages.txt"
+            label="Download a sample transcript"
+          />
           <p className="text-xs text-muted-foreground">
             Pick one or several files — iMessage, Discord, and Instagram exports are detected
             automatically and merged into a single history. Everything stays on this device.
