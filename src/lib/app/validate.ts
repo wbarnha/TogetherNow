@@ -493,11 +493,13 @@ export function validWatchEntry(raw: unknown, now = Date.now()): WatchEntry | un
   if (!entryId || !title) return undefined;
   return {
     id: entryId,
+    importId: id(raw["importId"]),
     service: oneOfOr(raw["service"], WATCH_SERVICE_IDS, "other"),
     title,
     detail: str(raw["detail"]),
     owner: oneOfOr(raw["owner"], SIDES, "them"),
     at: timestampOr(raw["at"], now, now),
+    dateUnknown: typeof raw["dateUnknown"] === "boolean" ? raw["dateUnknown"] : undefined,
     minutes: num(raw["minutes"], 0, 60 * 24 * 365),
     together: typeof raw["together"] === "boolean" ? raw["together"] : undefined,
   };
@@ -524,6 +526,9 @@ function validChatMessage(raw: unknown, now = Date.now()): ChatMessage | undefin
   if (!messageId || !text) return undefined;
   return {
     id: messageId,
+    // Preserved, not derived: dropping it here would orphan every message on
+    // the next hydration and make its import undeletable.
+    importId: id(raw["importId"]),
     source: oneOfOr(raw["source"], CHAT_SOURCES, "unknown"),
     owner: oneOfOr(raw["owner"], SIDES, "them"),
     senderName: strOr(raw["senderName"], "Unknown", LIMITS.shortText),

@@ -70,20 +70,22 @@ export function ImportIcsDialog({
   const skipped = result?.skipped ?? 0;
 
   const load = (text: string, label: string) => {
-    let count = 0;
+    // One parse. This used to run parseIcs twice here, on top of the memo's
+    // own parse — three walks of the same file on every load.
+    let events: ParsedIcsEvent[] = [];
     try {
-      count = parseIcs(text, zone).length;
+      events = parseIcs(text, zone);
     } catch {
-      count = 0;
+      events = [];
     }
-    if (count === 0) {
+    if (events.length === 0) {
       toast.error("No events found in that calendar file");
       return;
     }
     setRaw(text);
-    setSelected(new Set(parseIcs(text, zone).map(icsEventId)));
+    setSelected(new Set(events.map(icsEventId)));
     setSourceLabel(label);
-    toast.success(`Found ${count} event${count === 1 ? "" : "s"} in ${label}`);
+    toast.success(`Found ${events.length} event${events.length === 1 ? "" : "s"} in ${label}`);
   };
 
   const onFile = async (file: File | undefined) => {
@@ -211,7 +213,9 @@ export function ImportIcsDialog({
                     <span className="block font-medium">
                       {who === "me" ? state.me.name || "My" : state.them.name || "Their"} time
                     </span>
-                    <span className="block text-xs opacity-80">{zoneLabel(zone)}</span>
+                    <span className="block text-xs opacity-80">
+                      {zoneLabel(who === "me" ? state.me.timeZone : state.them.timeZone)}
+                    </span>
                   </button>
                 ))}
               </div>

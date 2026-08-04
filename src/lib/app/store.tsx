@@ -30,6 +30,14 @@ import { publishWidgetSnapshot } from "./widget";
 import { todayIn } from "./mood";
 import { createWriteBehind, readStoredState, writeStoredState } from "./persistence";
 import { LIMITS, validAppState } from "./validate";
+import {
+  claimLegacyImports,
+  mergeChatImport,
+  mergeWatchImport,
+  removeChatImport,
+  removeWatchImport,
+  type MergeResult,
+} from "./imports";
 
 /**
  * Everything that mutates the archive. These identities are created once for
@@ -56,13 +64,13 @@ export type StoreActions = {
   importChat: (
     messages: ChatMessage[],
     meta: Omit<ChatImport, "id" | "importedAt" | "messageCount">,
-  ) => number;
+  ) => MergeResult<ChatImport>;
   removeChatImport: (id: string, alsoMessages: boolean) => void;
   /** merges a viewing-history export, skipping entries already known */
   importWatch: (
     entries: WatchEntry[],
     meta: Omit<WatchImport, "id" | "importedAt" | "entryCount">,
-  ) => number;
+  ) => MergeResult<WatchImport>;
   removeWatchImport: (id: string, alsoEntries: boolean) => void;
   upsertWatchEntry: (e: WatchEntry) => void;
   removeWatchEntry: (id: string) => void;
@@ -117,13 +125,25 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [storageFull, setStorageFull] = useState(false);
 
-  // Kept in a ref so the write-behind scheduler — created once — always
-  // serializes the newest state without being rebuilt on every change.
+  // The authoritative copy of the archive.
+  //
+  // Every mutation is applied here first and only then handed to React, which
+  // makes two things work that otherwise cannot. The write-behind scheduler —
+  // created once — always serializes the newest state without being rebuilt.
+  // And an action can report on what it just did: a React updater has not run
+  // by the time the action returns, so an import that read its result out of
+  // one was reporting whatever the count happened to be beforehand.
+  //
+  // Reading `state` here rather than the ref would also be wrong for a caller
+  // that mutates twice in a tick — the import dialogs merge one staged file per
+  // call — because React has not re-rendered between them.
   const latest = useRef(state);
-  latest.current = state;
 
   const setState = useCallback((updater: (prev: AppState) => AppState) => {
-    setInternal(updater);
+    const next = updater(latest.current);
+    latest.current = next;
+    setInternal(next);
+    return next;
   }, []);
 
   /* --------------------------- hydrate once --------------------------- */
@@ -133,9 +153,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     // an older buggy build, or a partial write can all leave malformed data
     // behind, and the old code cast it straight to AppState.
     const stored = readStoredState();
-    if (stored !== undefined) setInternal(validAppState(stored));
+    // Through setState, so the authoritative ref is loaded too.
+    // Attach owners to anything imported before ownership was tracked, so a
+    // later deletion cannot fall back to guessing at a time range.
+    if (stored !== undefined) setState(() => claimLegacyImports(validAppState(stored)));
     setHydrated(true);
-  }, []);
+  }, [setState]);
 
   /* ------------------------- persist write-behind ---------------------- */
 
@@ -288,82 +311,21 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       removeGoal: (id) =>
         setState((prev) => ({ ...prev, goals: prev.goals.filter((g) => g.id !== id) })),
       importChat: (messages, meta) => {
-        let added = 0;
-        setState((prev) => {
-          const known = new Set(prev.chatMessages.map((m) => m.id));
-          const room = Math.max(0, LIMITS.chatMessages - prev.chatMessages.length);
-          const fresh = messages.filter((m) => !known.has(m.id)).slice(0, room);
-          added = fresh.length;
-          if (!fresh.length) return prev;
-          const record: ChatImport = {
-            ...meta,
-            id: newId(),
-            messageCount: fresh.length,
-            importedAt: Date.now(),
-          };
-          return {
-            ...prev,
-            chatMessages: [...prev.chatMessages, ...fresh].sort((a, b) => a.at - b.at),
-            chatImports: [...prev.chatImports, record],
-          };
-        });
-        return added;
+        // Applied to the authoritative snapshot, so the count returned here is
+        // what actually landed — including across the dialogs' per-file loop.
+        const result = mergeChatImport(latest.current, messages, meta, newId);
+        if (result.added > 0) setState(() => result.state);
+        return result;
       },
       removeChatImport: (id, alsoMessages) =>
-        setState((prev) => {
-          const record = prev.chatImports.find((i) => i.id === id);
-          return {
-            ...prev,
-            chatImports: prev.chatImports.filter((i) => i.id !== id),
-            chatMessages:
-              alsoMessages && record
-                ? prev.chatMessages.filter(
-                    (m) =>
-                      !(
-                        m.source === record.source &&
-                        m.at >= record.firstAt &&
-                        m.at <= record.lastAt
-                      ),
-                  )
-                : prev.chatMessages,
-          };
-        }),
+        setState((prev) => removeChatImport(prev, id, alsoMessages)),
       importWatch: (entries, meta) => {
-        let added = 0;
-        setState((prev) => {
-          const known = new Set(prev.watchEntries.map((e) => e.id));
-          const room = Math.max(0, LIMITS.watchEntries - prev.watchEntries.length);
-          const fresh = entries.filter((e) => !known.has(e.id)).slice(0, room);
-          added = fresh.length;
-          if (!fresh.length) return prev;
-          const record: WatchImport = {
-            ...meta,
-            id: newId(),
-            entryCount: fresh.length,
-            importedAt: Date.now(),
-          };
-          return {
-            ...prev,
-            watchEntries: [...prev.watchEntries, ...fresh].sort((a, b) => a.at - b.at),
-            watchImports: [...prev.watchImports, record],
-          };
-        });
-        return added;
+        const result = mergeWatchImport(latest.current, entries, meta, newId);
+        if (result.added > 0) setState(() => result.state);
+        return result;
       },
       removeWatchImport: (id, alsoEntries) =>
-        setState((prev) => {
-          const record = prev.watchImports.find((i) => i.id === id);
-          return {
-            ...prev,
-            watchImports: prev.watchImports.filter((i) => i.id !== id),
-            watchEntries:
-              alsoEntries && record
-                ? prev.watchEntries.filter(
-                    (e) => !(e.service === record.service && e.owner === record.owner),
-                  )
-                : prev.watchEntries,
-          };
-        }),
+        setState((prev) => removeWatchImport(prev, id, alsoEntries)),
       upsertWatchEntry: (entry) =>
         setState((prev) => {
           const next = upsertById(prev.watchEntries, entry, LIMITS.watchEntries);

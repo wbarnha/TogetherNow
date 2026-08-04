@@ -44,10 +44,20 @@ function splitLine(line: string) {
   return { name: (name ?? "").toUpperCase(), params, value };
 }
 
-/** Parse an ICS DTSTART value into an instant, or an all-day calendar date. */
+/**
+ * Parse an ICS DTSTART into an instant, or an all-day calendar date.
+ *
+ * `fallbackZone` resolves floating times — a DTSTART with neither a trailing
+ * `Z` nor a TZID. RFC 5545 says those are wall-clock time in whatever zone the
+ * reader is in, and the import dialog asks precisely that question ("whose
+ * clock were these times on?"). Treating them as UTC instead, as this did,
+ * silently shifted every such event by the zone's offset: a 9am New York
+ * appointment imported as 5am.
+ */
 function parseDateValue(
   value: string,
   params: Record<string, string>,
+  fallbackZone: string,
 ): { allDay: true; date: string } | { allDay: false; instant: Date } | null {
   const v = value.trim();
   const dateOnly = /^(\d{4})(\d{2})(\d{2})$/.exec(v);
@@ -68,10 +78,12 @@ function parseDateValue(
     Number(ss ?? "0"),
   );
   if (z) return { allDay: false, instant: new Date(naive) };
-  // Floating or TZID-qualified local time: resolve against the stated zone,
-  // falling back to the device zone.
-  const tz = params["TZID"];
-  if (!tz) return { allDay: false, instant: new Date(naive) };
+
+  // Wall-clock time, in the calendar's own zone when it names one and in the
+  // zone the user picked when it does not. Resolved twice because the offset
+  // depends on the instant, which depends on the offset — one pass lands on
+  // the wrong side of a daylight-saving boundary.
+  const tz = params["TZID"] ?? fallbackZone;
   let offset = zoneOffset(tz, new Date(naive));
   offset = zoneOffset(tz, new Date(naive - offset * 60000));
   return { allDay: false, instant: new Date(naive - offset * 60000) };
@@ -154,7 +166,7 @@ export function parseIcs(raw: string, zone: string): ParsedIcsEvent[] {
       const summary = props["SUMMARY"]?.value;
       const dtstart = props["DTSTART"];
       if (!dtstart) continue;
-      const when = parseDateValue(dtstart.value, dtstart.params);
+      const when = parseDateValue(dtstart.value, dtstart.params, zone);
       if (!when) continue;
       const notes = props["DESCRIPTION"]
         ? unescapeText(props["DESCRIPTION"].value)

@@ -83,6 +83,7 @@ export function ImportMessagesDialog({
 
   const doImport = () => {
     let added = 0;
+    let skipped = 0;
     for (const s of staged) {
       const messages: ChatMessage[] = s.parsed.messages.map((m) => ({
         id: messageId(s.parsed.source, m.at, m.text),
@@ -93,16 +94,24 @@ export function ImportMessagesDialog({
         at: m.at,
       }));
       const times = messages.map((m) => m.at);
-      added += importChat(messages, {
+      const result = importChat(messages, {
         source: s.parsed.source,
         label: s.fileName,
         firstAt: Math.min(...times),
         lastAt: Math.max(...times),
       });
+      added += result.added;
+      skipped += result.skipped;
     }
     if (added > 0) {
       toast.success(`${added} message${added === 1 ? "" : "s"} added`, {
-        description: "They're merged into your shared history, newest last.",
+        description: skipped
+          ? `${skipped} more didn't fit — your archive is at its limit.`
+          : "They're merged into your shared history, newest last.",
+      });
+    } else if (skipped > 0) {
+      toast.error("Your archive is full", {
+        description: `${skipped} message${skipped === 1 ? "" : "s"} couldn't be added. Remove an older import first.`,
       });
     } else {
       toast("Nothing new", { description: "Those messages were already in your archive." });

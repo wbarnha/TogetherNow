@@ -43,12 +43,12 @@ Lint, typecheck, test and build run as **independent jobs**
 job also reports bundle sizes in the run summary and fails if the client bundle
 picks up an outbound origin nobody reviewed.
 
-`.github/workflows/security.yml` runs a dependency audit and a lockfile-registry
-check on every push and weekly on a schedule. It also carries CodeQL and
-dependency-review jobs, gated behind an `ENABLE_CODEQL` repository variable —
-both need GitHub Advanced Security, which a private repository does not have by
-default. Set the variable to `true` (Settings → Secrets and variables → Actions
-→ Variables) once the repository is public or Advanced Security is enabled.
+`.github/workflows/security.yml` runs a dependency audit, a lockfile-registry
+check, CodeQL and dependency review — on every push, on pull requests, and
+weekly on a schedule. Code scanning is free on a public repository; if this one
+is ever made private without GitHub Advanced Security, those jobs fail rather
+than skip, because a scan that quietly does not run looks the same as one that
+found nothing.
 
 ---
 
