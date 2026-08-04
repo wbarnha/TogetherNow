@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { QrCode, RotateCcw, Moon, Sun, Users, RefreshCw } from "lucide-react";
+import { QrCode, RotateCcw, Moon, Sun, ShieldCheck, Users, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
@@ -194,6 +194,13 @@ function SettingsPage() {
         <Button asChild variant="outline" className="w-full">
           <Link to="/pair">
             <QrCode className="size-4" /> Share or import a code
+          </Link>
+        </Button>
+        {/* Both app stores expect the privacy policy to be reachable from
+            inside the app, not only from the store listing. */}
+        <Button asChild variant="outline" className="w-full">
+          <Link to="/privacy">
+            <ShieldCheck className="size-4" /> Privacy
           </Link>
         </Button>
         <AlertDialog>

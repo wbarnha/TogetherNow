@@ -4,12 +4,21 @@ name: Mobile builds
 # an `android/` directory that does not exist in this repository and is never
 # created — Capacitor generates it. Both jobs could only ever fail, and
 # `if-no-files-found: ignore` on the upload meant they failed quietly with a
-# green-looking artifact step. This version generates the platforms, gives
-# Capacitor an entry point to copy, and fails loudly when a build produces
-# nothing.
+# green-looking artifact step.
+#
+# The native projects are still generated rather than committed, so everything
+# the App Store and Play Console need is applied from `native/app.json` by
+# scripts/apply-native-config.mjs and then checked by
+# scripts/verify-store-readiness.mjs. A build that would be rejected at upload
+# fails here instead.
 
 on:
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Also build a signed release bundle (needs the keystore secrets)"
+        type: boolean
+        default: false
   push:
     tags: ["v*"]
 
@@ -22,6 +31,8 @@ permissions:
 
 env:
   BUN_VERSION: "1.3.11"
+  # A tag push is a release; a manual run is one only if asked for.
+  RELEASE: ${{ github.event_name == 'push' || inputs.release }}
 
 jobs:
   web:
@@ -62,7 +73,7 @@ jobs:
           retention-days: 3
 
   android:
-    name: Android (debug APK)
+    name: Android
     needs: web
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -98,6 +109,13 @@ jobs:
           bunx cap add android
           bunx cap sync android
 
+      # Permissions, backup policy, deep links, versions and release signing.
+      - name: Apply store configuration
+        run: bun run native:config
+
+      - name: Verify Play requirements
+        run: bun run store:check ${{ env.RELEASE == 'true' && '-- --release' || '' }}
+
       - name: Assemble debug APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
@@ -109,6 +127,38 @@ jobs:
           # A missing APK means the build failed; do not pretend otherwise.
           if-no-files-found: error
           retention-days: 14
+
+      # Play only accepts app bundles. This also proves the minified release
+      # build compiles, which the debug build does not.
+      - name: Decode the upload keystore
+        if: env.RELEASE == 'true'
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not set. A release bundle has to be signed with your upload key — see STORE.md."
+            exit 1
+          fi
+          echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+
+      - name: Build release bundle
+        if: env.RELEASE == 'true'
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew bundleRelease --no-daemon --stacktrace
+
+      - name: Upload release bundle
+        if: env.RELEASE == 'true'
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: android-release-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 30
 
   ios:
     name: iOS (unsigned build)
@@ -132,22 +182,25 @@ jobs:
           name: mobile-web-output
           path: .output/public
 
-      - name: Cache CocoaPods
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: ios/App/Pods
-          key: pods-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: pods-${{ runner.os }}-
-
       - name: Add and sync the iOS platform
         run: |
           bunx cap add ios
           bunx cap sync ios
 
+      # Privacy manifest, usage strings, export compliance, URL scheme, version.
+      - name: Apply store configuration
+        run: bun run native:config
+
+      - name: Verify App Store requirements
+        run: bun run store:check ${{ env.RELEASE == 'true' && '-- --release' || '' }}
+
+      # Capacitor 8 wires plugins through Swift Package Manager, so there is no
+      # CocoaPods workspace to build — only the Xcode project. The previous
+      # workflow passed `-workspace App.xcworkspace`, which does not exist.
       - name: Build app (no code signing)
         working-directory: ios/App
         run: |
-          xcodebuild -workspace App.xcworkspace -scheme App \
+          xcodebuild -project App.xcodeproj -scheme App \
             -sdk iphonesimulator -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO build

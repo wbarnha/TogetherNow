@@ -52,6 +52,13 @@ jobs:
       - name: Prettier
         run: bun run format:check
 
+      # Catches the store blockers that do not need a native project: a
+      # placeholder bundle ID, a missing privacy policy URL, an App Group that
+      # no longer matches. The rest are checked in the mobile workflow, against
+      # the generated iOS and Android projects.
+      - name: Store configuration
+        run: bun run store:check
+
   typecheck:
     name: Typecheck
     runs-on: ubuntu-latest
