@@ -159,11 +159,28 @@ manual "pick an area" flow already covers the same need.
 - `targetSdkVersion 36` from Capacitor 8, comfortably inside Play's rolling
   requirement.
 
-`store:check` also asserts that none of the permissions Play restricts have crept
-in — `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM`, `QUERY_ALL_PACKAGES`,
-`MANAGE_EXTERNAL_STORAGE`, `READ_SMS`, `ACCESS_BACKGROUND_LOCATION`,
-`ACCESS_FINE_LOCATION`, `READ_CONTACTS`. Reminders are scheduled inexactly on
-purpose so no exact-alarm exemption is needed.
+### Permissions the listing will show
+
+Gradle merges every Capacitor plugin's manifest into the one that ships, so the
+built app requests more than the app manifest names. The complete set, which
+`store:check` prints on every run:
+
+| Permission               | Comes from                       | Why                                                                     |
+| ------------------------ | -------------------------------- | ----------------------------------------------------------------------- |
+| `INTERNET`               | Capacitor                        | Loading the app's own bundled web assets                                |
+| `ACCESS_COARSE_LOCATION` | this app                         | The distance filter on the Ideas screen                                 |
+| `POST_NOTIFICATIONS`     | `@capacitor/local-notifications` | Reminders for plans and important dates (runtime prompt on Android 13+) |
+| `RECEIVE_BOOT_COMPLETED` | `@capacitor/local-notifications` | Re-registering already-scheduled reminders after a restart              |
+| `WAKE_LOCK`              | `@capacitor/local-notifications` | Delivering a reminder while the device is idle                          |
+
+None is restricted and none needs a Play declaration form. `store:check` reads
+the plugin manifests as well as the app's, so a permission arriving through a
+newly added plugin fails the build and names the plugin that introduced it. The
+list it enforces against is `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM`,
+`QUERY_ALL_PACKAGES`, `MANAGE_EXTERNAL_STORAGE`, `READ_SMS`,
+`ACCESS_BACKGROUND_LOCATION`, `ACCESS_FINE_LOCATION` and `READ_CONTACTS`.
+Reminders are scheduled inexactly on purpose, so no exact-alarm exemption is
+needed.
 
 ### Data Safety form
 

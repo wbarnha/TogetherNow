@@ -20,7 +20,7 @@
  * Usage: node scripts/verify-store-readiness.mjs [--release]
  */
 
-import { readFile, access } from "node:fs/promises";
+import { readFile, readdir, access } from "node:fs/promises";
 import path from "node:path";
 import plist from "plist";
 
@@ -220,6 +220,30 @@ if (await exists("android/app/src/main/AndroidManifest.xml")) {
     "utf8",
   );
 
+  // Gradle merges every Capacitor plugin's manifest into the one that ships, so
+  // the app's own manifest is only half the picture — and a newly added plugin
+  // is the realistic way a restricted permission arrives. Read the plugin
+  // manifests from node_modules rather than requiring a build first.
+  const pluginManifests = [];
+  for (const dir of await readdir(path.join(ROOT, "node_modules/@capacitor"))) {
+    const file = path.join(
+      ROOT,
+      "node_modules/@capacitor",
+      dir,
+      "android/src/main/AndroidManifest.xml",
+    );
+    try {
+      pluginManifests.push({ plugin: `@capacitor/${dir}`, xml: await readFile(file, "utf8") });
+    } catch {
+      /* not an Android plugin */
+    }
+  }
+  const merged = [manifest, ...pluginManifests.map((p) => p.xml)].join("\n");
+  const sourceOf = (permission) =>
+    manifest.includes(permission)
+      ? "the app manifest"
+      : (pluginManifests.find((p) => p.xml.includes(permission))?.plugin ?? "a merged manifest");
+
   for (const permission of CONFIG.permissions.androidUsesPermissions) {
     check(
       `Android declares ${permission.name.split(".").pop()}`,
@@ -268,10 +292,15 @@ if (await exists("android/app/src/main/AndroidManifest.xml")) {
     if (declared.has(permission)) continue;
     check(
       `Android does not request ${permission.split(".").pop()}`,
-      !manifest.includes(permission),
-      `${permission} is in the manifest but not in native/app.json — ${why}. Remove it, or declare it there with a justification if you really need it.`,
+      !merged.includes(permission),
+      `${permission} comes from ${sourceOf(permission)} but is not declared in native/app.json — ${why}. Remove it, or declare it there with a justification if you really need it.`,
     );
   }
+
+  // Anything a plugin adds still appears on the Play listing and still has to
+  // be defensible, so surface the full merged set rather than only the app's.
+  const allPermissions = [...merged.matchAll(/android\.permission\.[A-Z_]+/g)].map((m) => m[0]);
+  warn("Permissions the built app will request", [...new Set(allPermissions)].sort().join(", "));
 
   if (await exists("android/variables.gradle")) {
     const vars = await readFile(path.join(ROOT, "android/variables.gradle"), "utf8");
