@@ -17,8 +17,8 @@ exported as `.ics` / `.csv` files.
 ## Quick start (web)
 
 ```sh
-git clone https://github.com/wbarnha/close-forever.git
-cd close-forever
+git clone https://github.com/wbarnha/TogetherNow.git
+cd TogetherNow
 bun install
 bun run dev            # http://localhost:8080
 ```
