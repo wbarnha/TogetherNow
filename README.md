@@ -50,6 +50,12 @@ is ever made private without GitHub Advanced Security, those jobs fail rather
 than skip, because a scan that quietly does not run looks the same as one that
 found nothing.
 
+> Dependency review additionally needs the repository's **dependency graph**,
+> which is off by default. Until it is enabled at _Settings → Advanced Security
+> → Dependency graph_ (free on public repositories), that one job emits a
+> warning naming the setting instead of reviewing the diff. Known advisories
+> are still caught by the audit job either way.
+
 ---
 
 ## Privacy and security posture

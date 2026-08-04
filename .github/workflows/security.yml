@@ -108,7 +108,30 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+      # Dependency review needs the repository's dependency graph, which is a
+      # setting rather than anything in this repo. Probing for it first keeps
+      # the two failures apart: "nobody has turned it on" surfaces as a warning
+      # naming the exact setting, while a review that runs and finds something
+      # still fails the build. The old ENABLE_CODEQL gate collapsed both into a
+      # silent skip, which is indistinguishable from a clean scan.
+      - name: Check the dependency graph is available
+        id: graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          status=$(curl -sS -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/dependency-graph/compare/${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}")
+          if [ "$status" = "200" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Dependency review is not running::Enable the dependency graph at Settings → Advanced Security → Dependency graph. It is free on public repositories. Known advisories are still checked by the audit job; this adds per-PR review and licence policy. (API returned $status.)"
+          fi
+
+      - if: steps.graph.outputs.available == 'true'
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
         with:
           fail-on-severity: high
           comment-summary-in-pr: on-failure
