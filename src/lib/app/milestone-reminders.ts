@@ -1,5 +1,6 @@
 import type { AppState, Milestone } from "./types";
 import { startOfLocalDay } from "./time";
+import { MILESTONE_ID_MAX, MILESTONE_ID_MIN, notificationId } from "./notification-ids";
 
 export type ScheduledReminder = {
   /** stable numeric id so re-syncing replaces rather than duplicates */
@@ -34,14 +35,12 @@ function occurrencesFor(m: Milestone, from: Date): Date[] {
   return [new Date(base, (mo ?? 1) - 1, d ?? 1), new Date(base + 1, (mo ?? 1) - 1, d ?? 1)];
 }
 
-/** Deterministic small positive int from a string, so ids survive reloads. */
+/**
+ * Deterministic id inside the milestone band, so a reminder keeps the same id
+ * across reloads and a resync replaces it rather than adding a second copy.
+ */
 function hashId(key: string) {
-  let h = 2166136261;
-  for (let i = 0; i < key.length; i++) {
-    h ^= key.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return (Math.abs(h) % 1_000_000_000) + 1;
+  return notificationId(key, MILESTONE_ID_MIN, MILESTONE_ID_MAX);
 }
 
 function yearsAt(m: Milestone, occurrence: Date) {
