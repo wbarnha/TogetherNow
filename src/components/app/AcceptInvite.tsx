@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Check, Heart, Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -11,10 +11,11 @@ import {
   SHARE_CATEGORIES,
   acceptAll,
   applyShareCode,
-  parseShareCode,
   previewShareCode,
   type AcceptChoices,
+  type SharePayload,
 } from "@/lib/app/share";
+import { decodeShareCode } from "@/lib/app/share-decode";
 import { sendInvite } from "@/lib/app/invite";
 
 /** "a, b and c" — so the confirmation names what was actually taken. */
@@ -37,16 +38,42 @@ export function AcceptInvite({ code, onDismiss }: { code: string; onDismiss: () 
   // before it lands.
   const [choices, setChoices] = useState<AcceptChoices>(acceptAll);
 
-  const parsed = useMemo(() => {
-    try {
-      return { payload: parseShareCode(code), error: null as string | null };
-    } catch (err) {
-      return {
-        payload: null,
-        error: err instanceof Error ? err.message : "That invite link couldn't be read.",
-      };
-    }
+  // Decoding used to happen right here in a `useMemo`, which put an arbitrary
+  // amount of decompression inside React's render pass: an oversized or
+  // hostile invite froze the screen with nothing painted and no way out. It
+  // now runs on a worker that is abandoned if the screen closes first.
+  const [parsed, setParsed] = useState<{
+    payload: SharePayload | null;
+    error: string | null;
+    pending: boolean;
+  }>({ payload: null, error: null, pending: true });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setParsed({ payload: null, error: null, pending: true });
+    decodeShareCode(code, { signal: controller.signal })
+      .then((payload) => {
+        if (!controller.signal.aborted) setParsed({ payload, error: null, pending: false });
+      })
+      .catch((err: unknown) => {
+        if (controller.signal.aborted) return;
+        setParsed({
+          payload: null,
+          pending: false,
+          error: err instanceof Error ? err.message : "That invite link couldn't be read.",
+        });
+      });
+    return () => controller.abort();
   }, [code]);
+
+  if (parsed.pending) {
+    return (
+      <div className="space-y-2 rounded-3xl border border-border/60 p-5">
+        <h2 className="font-display text-xl font-semibold">Opening your invite…</h2>
+        <p className="text-sm text-muted-foreground">This only takes a moment.</p>
+      </div>
+    );
+  }
 
   if (parsed.error || !parsed.payload) {
     return (

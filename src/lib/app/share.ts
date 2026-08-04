@@ -89,11 +89,47 @@ export function buildShareCode(state: AppState): string {
   return PREFIX + LZString.compressToEncodedURIComponent(JSON.stringify(payload));
 }
 
-const UNREADABLE = "That code couldn't be read. Check you copied all of it.";
-const NOT_A_CODE = "That doesn't look like a Together Now share code.";
+export const UNREADABLE = "That code couldn't be read. Check you copied all of it.";
+export const NOT_A_CODE = "That doesn't look like a Together Now share code.";
 
 /**
- * Turn a pasted or scanned code into a payload that is safe to merge.
+ * The cheap half: strip the wrapper and refuse anything oversized.
+ *
+ * Split out from the rest so the length check happens before a single byte is
+ * decompressed, and so the expensive half can be moved off the main thread on
+ * its own — see `share-decode.ts`.
+ */
+export function shareCodeBody(raw: string): string {
+  if (typeof raw !== "string" || raw.length > LIMITS.shareCode) throw new Error(UNREADABLE);
+  const trimmed = raw.trim().replace(/\s+/g, "");
+  const body = trimmed.startsWith(PREFIX) ? trimmed.slice(PREFIX.length) : trimmed;
+  if (!body) throw new Error(UNREADABLE);
+  return body;
+}
+
+/**
+ * The expensive half: decompress and parse.
+ *
+ * Both steps scale with what the *sender* chose, not with what was pasted.
+ * lz-string reaches better than a thousandfold expansion on repetitive input,
+ * so a code small enough to fit in a QR can decompress into hundreds of
+ * megabytes. Neither step can be interrupted once started, which is why
+ * `decodeShareCode` runs this on a worker it can terminate.
+ */
+export function inflateShareCode(body: string): unknown {
+  const json = LZString.decompressFromEncodedURIComponent(body);
+  if (!json) throw new Error(UNREADABLE);
+  if (json.length > LIMITS.sharePayload) throw new Error(NOT_A_CODE);
+
+  try {
+    return JSON.parse(json);
+  } catch {
+    throw new Error(UNREADABLE);
+  }
+}
+
+/**
+ * The trust boundary: turn an arbitrary object into a payload safe to merge.
  *
  * A share code is a blob handed over by whoever is on the other end of a QR
  * scan or a chat message, so nothing in it is trusted. Every field goes
@@ -101,25 +137,7 @@ const NOT_A_CODE = "That doesn't look like a Together Now share code.";
  * http(s), sizes are capped, and any single malformed item is discarded
  * without failing the rest of the import.
  */
-export function parseShareCode(raw: string): SharePayload {
-  if (typeof raw !== "string" || raw.length > LIMITS.shareCode) throw new Error(UNREADABLE);
-
-  const trimmed = raw.trim().replace(/\s+/g, "");
-  const body = trimmed.startsWith(PREFIX) ? trimmed.slice(PREFIX.length) : trimmed;
-  if (!body) throw new Error(UNREADABLE);
-
-  // lz-string expands aggressively; refuse a payload that decompresses into
-  // more JSON than any real archive could contain rather than parsing it.
-  const json = LZString.decompressFromEncodedURIComponent(body);
-  if (!json) throw new Error(UNREADABLE);
-  if (json.length > LIMITS.sharePayload) throw new Error(NOT_A_CODE);
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(json);
-  } catch {
-    throw new Error(UNREADABLE);
-  }
+export function validateSharePayload(parsed: unknown): SharePayload {
   if (!isRecord(parsed) || parsed["v"] !== 1) throw new Error(NOT_A_CODE);
 
   const now = Date.now();
@@ -156,6 +174,17 @@ export function parseShareCode(raw: string): SharePayload {
   if (total === 0 && !str(parsed["from"], LIMITS.shortText)) throw new Error(NOT_A_CODE);
 
   return payload;
+}
+
+/**
+ * Turn a pasted or scanned code into a payload that is safe to merge.
+ *
+ * Synchronous, and kept for the worker-less fallback and for tests.
+ * Application code should call `decodeShareCode` instead, which does the same
+ * work somewhere it can be abandoned.
+ */
+export function parseShareCode(raw: string): SharePayload {
+  return validateSharePayload(inflateShareCode(shareCodeBody(raw)));
 }
 
 /**
