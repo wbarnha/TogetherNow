@@ -79,10 +79,24 @@ export const LIMITS = {
   calendarSources: 200,
   handles: 20,
   reminders: 12,
-  /** compressed share code, before decompression */
-  shareCode: 4_000_000,
-  /** decompressed share-code JSON */
-  sharePayload: 16_000_000,
+  /**
+   * Compressed share code, before decompression.
+   *
+   * A code built from an archive sitting on every one of `SHARE_CAPS` measures
+   * about 175,000 characters, so this leaves better than twice the headroom any
+   * real code needs. It used to be 4,000,000 — twenty-three times larger than
+   * anything the app can produce, and every character of that is decompression
+   * work an attacker gets to ask for.
+   */
+  shareCode: 400_000,
+  /**
+   * Decompressed share-code JSON.
+   *
+   * The same maximal archive produces about 1.6 MB. Note that this is checked
+   * *after* decompressing, so it bounds what gets parsed, not what gets
+   * inflated — see `share-decode.ts` for the part that bounds the inflation.
+   */
+  sharePayload: 4_000_000,
 } as const;
 
 /** An `updatedAt` further ahead than this is a clock error or an attempt to
