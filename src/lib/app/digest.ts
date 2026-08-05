@@ -45,7 +45,7 @@ function utf8(value: string): Uint8Array {
   // targets has one.
   const out: number[] = [];
   for (const char of value) {
-    let code = char.codePointAt(0)!;
+    const code = char.codePointAt(0)!;
     if (code < 0x80) out.push(code);
     else if (code < 0x800) out.push(0xc0 | (code >> 6), 0x80 | (code & 63));
     else if (code < 0x10000)
@@ -57,7 +57,6 @@ function utf8(value: string): Uint8Array {
         0x80 | ((code >> 6) & 63),
         0x80 | (code & 63),
       );
-      code = 0;
     }
   }
   return Uint8Array.from(out);

@@ -50,7 +50,7 @@ export function ImportIcsDialog({
   // Re-read whenever the anchor zone changes so displayed times stay truthful.
   const result = useMemo(() => {
     if (!raw) return null;
-    let events: ParsedIcsEvent[] = [];
+    let events: ParsedIcsEvent[];
     try {
       events = parseIcs(raw, zone);
     } catch {
@@ -73,7 +73,7 @@ export function ImportIcsDialog({
   const load = (text: string, label: string) => {
     // One parse. This used to run parseIcs twice here, on top of the memo's
     // own parse — three walks of the same file on every load.
-    let events: ParsedIcsEvent[] = [];
+    let events: ParsedIcsEvent[];
     try {
       events = parseIcs(text, zone);
     } catch {
