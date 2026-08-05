@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { SampleFileLink } from "@/components/app/SampleFileLink";
 import {
   dedupeParsed,
   matchExistingPlaces,
@@ -185,6 +186,7 @@ export function ImportPlacesDialog({
               <Upload className="mr-2 size-4" />
               Choose a file
             </Button>
+            <SampleFileLink file="together-now-sample-places.csv" label="Download a sample list" />
 
             <div className="space-y-2">
               <Label htmlFor="places-paste">Or paste links / list text</Label>

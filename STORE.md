@@ -58,7 +58,7 @@ intent:
 | Are there accounts?              | No                                                               | No auth code, no credential storage                                                                               |
 | Analytics or crash reporting?    | No                                                               | No SDK is installed                                                                                               |
 | Advertising or tracking?         | No                                                               | `NSPrivacyTracking` is `false`; no ad identifier is read                                                          |
-| Where does user data live?       | On the device                                                    | `src/lib/app/persistence.ts` writes to `localStorage`; Android backup is disabled                                 |
+| Where does user data live?       | On the device                                                    | `src/lib/app/persistence.ts` writes to IndexedDB in the app's own sandbox; Android backup is disabled             |
 | What is transmitted off device?  | Place-search text, when the user searches                        | `src/lib/app/geocode.ts`                                                                                          |
 | Third-party network destinations | OpenStreetMap Nominatim (search), OpenStreetMap tiles (map view) | Enforced by the CSP and by the CI origin check                                                                    |
 | Can the user delete everything?  | Yes, in-app, immediately                                         | **You two → Erase everything**                                                                                    |

@@ -1,3 +1,4 @@
+import { digestOf } from "./digest";
 import type { Owner } from "./types";
 
 export type ChatSourceId = "imessage" | "discord" | "instagram" | "unknown";
@@ -171,14 +172,41 @@ export function parseCsvExport(text: string, me = "Me"): ParsedExport | null {
   return out.length ? collect(out, source) : null;
 }
 
+/**
+ * A timestamp line, optionally followed by " - Sender:".
+ *
+ * The trailing part was once `(?:\])?\s*(?:-\s*(.+?):)?\s*$`, with a `\s*`
+ * on both sides of the optional group. A run of spaces could be divided
+ * between the two in every possible way, so a line ending in whitespace and
+ * one stray character cost time quadratic in its length: 16,000 spaces took
+ * 241 ms, and an imported file may be 32 MB. Folding the leading `\s*` inside
+ * the optional group leaves exactly one way to match a space run.
+ *
+ * The sender is bounded too. It is a name, not a document.
+ */
 const TS_LINE =
-  /^(?:\[)?((?:\w{3,9}\s+\d{1,2},?\s+\d{4}|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})[,\s]+\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap]\.?[Mm]\.?)?)(?:\])?\s*(?:-\s*(.+?):)?\s*$/;
+  /^(?:\[)?((?:\w{3,9}\s+\d{1,2},?\s+\d{4}|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})[,\s]+\d{1,2}:\d{2}(?::\d{2})?(?:\s?[APap]\.?[Mm]\.?)?)(?:\])?(?:\s*-\s*(.{1,64}?):)?\s*$/;
 
 /**
  * Plain-text iMessage exports (imessage-exporter / iMazing / copy-paste).
  * Handles both "timestamp line, sender line, body" blocks and
  * "[timestamp] Sender: body" single lines.
  */
+/**
+ * "[timestamp] Sender: body" on one line.
+ *
+ * Every bound here is load-bearing. With an unbounded `(.+?)` for the stamp
+ * and `\s+` for the separator, a run of spaces could be split between the two
+ * in every possible way. A single line of 8,000 spaces took 14 seconds to
+ * reject, and nothing stops an imported file being one 32 MB line — so any
+ * chat export could freeze the tab for as long as it liked.
+ *
+ * A timestamp is never 64 characters and a separator is never four spaces, so
+ * bounding both costs nothing real and makes the work per line constant. The
+ * body stays unbounded: that is the part legitimately allowed to be long.
+ */
+const INLINE_LINE = /^\[?(.{1,64}?)\]?[ \t]{1,4}([^:]{1,60}):[ \t](.+)$/;
+
 export function parseImessageText(text: string, me = "Me"): ParsedExport | null {
   const lines = text.split("\n").map((l) => l.replace(/\r$/, ""));
   const out: ParsedMessage[] = [];
@@ -208,7 +236,7 @@ export function parseImessageText(text: string, me = "Me"): ParsedExport | null 
       sender = match[2] ? match[2].trim() : null;
       continue;
     }
-    const inline = /^\[?(.+?)\]?\s+([^:]{1,60}):\s(.+)$/.exec(line.trim());
+    const inline = INLINE_LINE.exec(line.trim());
     if (inline && !Number.isNaN(Date.parse(inline[1] ?? ""))) {
       flush();
       at = Date.parse(inline[1] ?? "");
@@ -271,7 +299,27 @@ export function guessOwners(parsed: ParsedExport, meName: string, themName: stri
 }
 
 /** Stable id so re-importing the same export doesn't duplicate the thread. */
-export function messageId(source: ChatSourceId, at: number, text: string) {
+/**
+ * Stable id so re-importing the same export doesn't duplicate the thread.
+ *
+ * Everything that identifies a message goes in. The previous version hashed
+ * only source, timestamp and the first 120 characters into 32 bits — and then
+ * `Math.abs(h) >>> 0` folded the sign away, leaving 31. Two people replying
+ * in the same second with the same opening sentence collided outright, and at
+ * the archive's 200,000-message ceiling ordinary collisions were expected
+ * about five times over. A colliding message is not flagged: it is taken for a
+ * duplicate and dropped.
+ */
+export function messageId(source: ChatSourceId, at: number, senderName: string, text: string) {
+  return `msg-${digestOf(source, at, senderName, text)}`;
+}
+
+/**
+ * The id this message would have had before the digest changed.
+ *
+ * Kept so `migrateItemIds` can recognise archives written by an older build.
+ */
+export function legacyMessageId(source: ChatSourceId, at: number, text: string) {
   let h = 2166136261;
   const key = `${source}|${at}|${text.slice(0, 120)}`;
   for (let i = 0; i < key.length; i++) {

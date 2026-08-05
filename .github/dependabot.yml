@@ -35,3 +35,17 @@ updates:
       time: "06:00"
     # Workflows pin actions by commit SHA, which nothing else will ever update.
     open-pull-requests-limit: 5
+    # Some actions cannot move independently, and Dependabot has no way to know
+    # it: it raises one pull request per action and each looks harmless alone.
+    groups:
+      # init writes its own version into the config it serializes, and analyze
+      # throws a ConfigurationError reading a config written by a different
+      # version. Bumping either one alone turns the CodeQL job red on every
+      # push, every pull request, and the weekly cron.
+      codeql:
+        patterns: ["github/codeql-action*"]
+      # A matched pair by convention rather than by a hard check today, but the
+      # artifact format has been changed across majors before (v3 uploads were
+      # unreadable by v4), and these two only ever move for the same reason.
+      artifacts:
+        patterns: ["actions/upload-artifact", "actions/download-artifact"]
