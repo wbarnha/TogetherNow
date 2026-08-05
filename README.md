@@ -17,8 +17,8 @@ exported as `.ics` / `.csv` files.
 ## Quick start (web)
 
 ```sh
-git clone https://github.com/wbarnha/close-forever.git
-cd close-forever
+git clone https://github.com/wbarnha/TogetherNow.git
+cd TogetherNow
 bun install
 bun run dev            # http://localhost:8080
 ```
@@ -43,12 +43,18 @@ Lint, typecheck, test and build run as **independent jobs**
 job also reports bundle sizes in the run summary and fails if the client bundle
 picks up an outbound origin nobody reviewed.
 
-`.github/workflows/security.yml` runs a dependency audit and a lockfile-registry
-check on every push and weekly on a schedule. It also carries CodeQL and
-dependency-review jobs, gated behind an `ENABLE_CODEQL` repository variable —
-both need GitHub Advanced Security, which a private repository does not have by
-default. Set the variable to `true` (Settings → Secrets and variables → Actions
-→ Variables) once the repository is public or Advanced Security is enabled.
+`.github/workflows/security.yml` runs a dependency audit, a lockfile-registry
+check, CodeQL and dependency review — on every push, on pull requests, and
+weekly on a schedule. Code scanning is free on a public repository; if this one
+is ever made private without GitHub Advanced Security, those jobs fail rather
+than skip, because a scan that quietly does not run looks the same as one that
+found nothing.
+
+> Dependency review additionally needs the repository's **dependency graph**,
+> which is off by default. Until it is enabled at _Settings → Advanced Security
+> → Dependency graph_ (free on public repositories), that one job emits a
+> warning naming the setting instead of reviewing the diff. Known advisories
+> are still caught by the audit job either way.
 
 ---
 
@@ -65,7 +71,7 @@ The app's promise is that nothing leaves the device, so the build enforces it:
   nowhere to send the archive. See `src/lib/security.ts`.
 - **Everything that comes in from outside is validated** before it reaches
   React state or storage — share codes, invite links, imported files, and
-  whatever is already in localStorage. See `src/lib/app/validate.ts` and
+  whatever was already in storage. See `src/lib/app/validate.ts` and
   `src/lib/app/safe-url.ts`.
 - **Invite links carry the share code in the URL fragment**, never the query
   string, so the payload is not sent to any server or logged along the way.
@@ -98,12 +104,24 @@ fails on anything a store would reject.
 
 ## Prerequisites for native builds
 
-|         | iOS                                      | Android                                                |
-| ------- | ---------------------------------------- | ------------------------------------------------------ |
-| OS      | macOS 13+                                | macOS, Windows, or Linux                               |
-| Tooling | Xcode 15+ and Xcode Command Line Tools   | Android Studio (Hedgehog or newer)                     |
-| Extra   | CocoaPods (`sudo gem install cocoapods`) | JDK 21 + Android SDK 34 (installed via Android Studio) |
-| Device  | Free Apple ID for on-device runs         | USB debugging enabled, or an emulator                  |
+|         | iOS                                          | Android                                                |
+| ------- | -------------------------------------------- | ------------------------------------------------------ |
+| OS      | macOS 15.6+ (Xcode 26.4 and newer need 26.2) | macOS, Windows, or Linux                               |
+| Tooling | Xcode 26+ and Xcode Command Line Tools       | Android Studio (Hedgehog or newer)                     |
+| Extra   | Nothing else — see the note below            | JDK 21 + Android SDK 36 (installed via Android Studio) |
+| Device  | Free Apple ID for on-device runs             | USB debugging enabled, or an emulator                  |
+
+**Xcode 26 is not just a recommendation.** Since 28 April 2026 App Store
+Connect rejects any upload built against an iOS SDK older than 26, and Xcode 25
+and earlier cannot produce one. Sideloading has no such rule, so an older Xcode
+will happily build something that runs on your own phone and can never be
+submitted — [the mobile workflow](.github/workflows/mobile.yml) asserts the SDK
+version for exactly that reason.
+
+**No CocoaPods.** Capacitor 8 resolves plugins with Swift Package Manager, so
+`bunx cap add ios` generates `App.xcodeproj` and no `App.xcworkspace` or
+`Podfile` at all. (`cap add ios --packagemanager cocoapods` still opts into the
+old layout; nothing here does.)
 
 Both platforms also need `bun install` and one successful **`bun run build:mobile`**
 first. Use that rather than `bun run build`: a phone has no server to render
@@ -134,10 +152,17 @@ To build from the command line without signing (what CI does):
 
 ```sh
 cd ios/App
-xcodebuild -workspace App.xcworkspace -scheme App \
-  -sdk iphonesimulator -configuration Debug \
+xcodebuild -project App.xcodeproj -scheme App \
+  -configuration Release \
+  -destination 'generic/platform=iOS' \
+  -derivedDataPath build \
   CODE_SIGNING_ALLOWED=NO build
 ```
+
+`generic/platform=iOS`, not `iphonesimulator`: a simulator build produces a
+binary no phone can run, and it is not obvious from the output which one you
+got. To wrap the result into something a re-signing tool will install, see
+[SIDELOAD.md](./SIDELOAD.md) and `scripts/package-ipa.sh`.
 
 ---
 

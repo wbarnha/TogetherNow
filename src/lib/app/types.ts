@@ -192,6 +192,12 @@ export type CalendarSource = {
 /** One message in the unified conversation archive. */
 export type ChatMessage = {
   id: string;
+  /**
+   * The import that brought this message in. Absent on messages that predate
+   * ownership tracking, which removal deliberately never claims — see
+   * `claimLegacyImports`.
+   */
+  importId?: string | undefined;
   source: "imessage" | "discord" | "instagram" | "unknown";
   /** "me" or "them" — group chats collapse to the two of you */
   owner: "me" | "them";
@@ -217,13 +223,20 @@ export type WatchService = "netflix" | "hulu" | "steam" | "crunchyroll" | "other
 /** One thing one of you watched or played. */
 export type WatchEntry = {
   id: string;
+  /** The import that brought this entry in; absent for manual entries. */
+  importId?: string | undefined;
   service: WatchService;
   title: string;
   /** season / episode / chapter detail */
   detail?: string | undefined;
   owner: "me" | "them";
-  /** epoch ms */
+  /** epoch ms; when `dateUnknown` is set this is only a sort position */
   at: number;
+  /**
+   * The export carried no usable date. The entry still needs a number to sort
+   * by, but the UI must not present it as when this was actually watched.
+   */
+  dateUnknown?: boolean | undefined;
   /** minutes watched or played, when known */
   minutes?: number | undefined;
   /** both of you were in front of it */

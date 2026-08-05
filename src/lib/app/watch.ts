@@ -1,3 +1,4 @@
+import { digestOf } from "./digest";
 import type { Owner } from "./types";
 
 export type WatchService = "netflix" | "hulu" | "steam" | "crunchyroll" | "other";
@@ -6,8 +7,14 @@ export type ParsedWatch = {
   title: string;
   /** episode / chapter detail pulled out of the title when present */
   detail?: string | undefined;
-  /** epoch ms */
-  at: number;
+  /**
+   * Epoch ms, or null when the export carries no usable date.
+   *
+   * This used to default to `Date.now()`, which then went into the entry id —
+   * so re-importing the same file produced a different id for every undated
+   * row and duplicated all of them, every time.
+   */
+  at: number | null;
   /** minutes watched or played, when the export tells us */
   minutes?: number | undefined;
 };
@@ -183,7 +190,7 @@ function parseSteamJson(text: string): ParsedWatch[] | null {
       .filter((g) => g && typeof g.name === "string")
       .map((g) => ({
         title: g.name!,
-        at: g.rtime_last_played ? g.rtime_last_played * 1000 : Date.now(),
+        at: g.rtime_last_played ? g.rtime_last_played * 1000 : null,
         minutes: g.playtime_2weeks ?? g.playtime_forever ?? undefined,
       }));
   } catch {
@@ -218,7 +225,7 @@ function parseGenericJson(text: string): ParsedWatch[] | null {
         (row["timestamp"] as string) ??
         (row["last_watched"] as string) ??
         "";
-      const at = parseDateish(String(when)) ?? Date.now();
+      const at = parseDateish(String(when));
       const mins = Number(row["minutes"] ?? row["duration_minutes"] ?? NaN);
       const split = splitTitle(title);
       out.push({
@@ -252,7 +259,7 @@ function parseCsvHistory(text: string): ParsedWatch[] | null {
     out.push({
       title: split.title,
       detail: split.detail,
-      at: at ?? Date.now(),
+      at,
       minutes: Number.isFinite(mins) && mins > 0 ? mins : undefined,
     });
   }
@@ -267,16 +274,79 @@ export function parseWatchFile(text: string, fileName: string): ParsedWatchFile 
       ? (parseSteamJson(trimmed) ?? parseGenericJson(trimmed))
       : parseCsvHistory(trimmed);
   if (!entries || !entries.length) return null;
-  return { service, entries: entries.sort((a, b) => a.at - b.at) };
+  return { service, entries: entries.sort((a, b) => (a.at ?? 0) - (b.at ?? 0)) };
 }
 
 /* -------------------------------- stable ids ----------------------------- */
 
-export function watchId(service: WatchService, at: number, title: string, detail?: string) {
+function hash32(key: string) {
   let h = 0;
-  const key = `${service}|${at}|${title}|${detail ?? ""}`;
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0;
-  return `w-${service}-${(h >>> 0).toString(36)}`;
+  return (h >>> 0).toString(36);
+}
+
+export function watchId(service: WatchService, at: number, title: string, detail?: string) {
+  return `w-${service}-${digestOf(service, at, title, detail)}`;
+}
+
+/** The id this entry would have had before the digest changed. */
+export function legacyWatchId(service: WatchService, at: number, title: string, detail?: string) {
+  return `w-${service}-${hash32(`${service}|${at}|${title}|${detail ?? ""}`)}`;
+}
+
+/**
+ * Id for a row whose export carried no date.
+ *
+ * Derived from what the file actually says rather than from the clock, so the
+ * same row gets the same id on every import. `occurrence` separates rows that
+ * are identical in every other respect — two plays of the same episode listed
+ * twice with no timestamps — and is the row's index among its own duplicates,
+ * not its position in the file, so adding unrelated rows does not renumber it.
+ *
+ * The file name is deliberately not part of this: browsers hand back
+ * "history (1).csv" on a second download of the same export.
+ */
+export function undatedWatchId(
+  service: WatchService,
+  title: string,
+  detail: string | undefined,
+  occurrence: number,
+) {
+  return `w-${service}-u-${digestOf(service, title, detail, occurrence)}`;
+}
+
+/** The id an undated entry would have had before the digest changed. */
+export function legacyUndatedWatchId(
+  service: WatchService,
+  title: string,
+  detail: string | undefined,
+  occurrence: number,
+) {
+  return `w-${service}-u-${hash32(`${service}|${title}|${detail ?? ""}|${occurrence}`)}`;
+}
+
+/**
+ * Stable id for a parsed row, dated or not.
+ *
+ * `seen` counts how many identical undated rows have already been assigned an
+ * id, so callers walk a file's rows in order through one shared map.
+ *
+ * The count is kept per service because the id is: the same title on Netflix
+ * and on Steam are different rows and each starts at occurrence 0. An import
+ * never notices, since one file is one service, but a caller sweeping a whole
+ * archive would otherwise number the second service's rows as repeats of the
+ * first and produce ids no fresh import could reproduce.
+ */
+export function parsedWatchId(
+  service: WatchService,
+  entry: ParsedWatch,
+  seen: Map<string, number>,
+) {
+  if (entry.at !== null) return watchId(service, entry.at, entry.title, entry.detail);
+  const key = `${service}|${entry.title}|${entry.detail ?? ""}`;
+  const occurrence = seen.get(key) ?? 0;
+  seen.set(key, occurrence + 1);
+  return undatedWatchId(service, entry.title, entry.detail, occurrence);
 }
 
 /* --------------------------------- stats --------------------------------- */

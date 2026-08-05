@@ -283,7 +283,9 @@ function WatchPage() {
                     <p className="truncate text-sm font-medium">{e.title}</p>
                     <p className="truncate text-xs text-muted-foreground">
                       {e.owner === "me" ? meName : themName} ·{" "}
-                      {format(new Date(e.at), "d MMM yyyy")}
+                      {e.dateUnknown
+                        ? "no date in the export"
+                        : format(new Date(e.at), "d MMM yyyy")}
                       {e.detail ? ` · ${e.detail}` : ""}
                     </p>
                   </div>
