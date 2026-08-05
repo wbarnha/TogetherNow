@@ -11,12 +11,13 @@ name: Publish the privacy policy to GitHub Pages
 # See scripts/build-pages.mjs for why, and for why the app itself is not
 # published here.
 #
-# No manual setup: the build job runs actions/configure-pages with
-# `enablement: true`, which switches the repository's Pages source to GitHub
-# Actions on the first run. If that ever fails, the deploy job stops with "Get
-# Pages site failed" rather than publishing nowhere quietly — the policy URL in
-# native/app.json would otherwise point at nothing, which is the failure this
-# workflow exists to prevent.
+# ONE-TIME SETUP: Settings > Pages > Source must be set to "GitHub Actions".
+# This workflow tries to do it for you and cannot: creating a Pages site
+# requires admin, and GITHUB_TOKEN does not have it however many scopes the job
+# declares. Until it is set, the build stops at the "Confirm Pages is enabled"
+# step with an error saying so, rather than publishing nowhere quietly — the
+# policy URL in native/app.json would otherwise point at nothing, which is the
+# failure this workflow exists to prevent.
 
 on:
   push:
@@ -60,14 +61,37 @@ jobs:
         with:
           persist-credentials: false
 
-      # `enablement: true` switches the repository's Pages source to GitHub
-      # Actions if it is not already, so the first run of this workflow publishes
-      # instead of failing on a setting nobody remembered to flip. Without it the
-      # deploy job dies with "Get Pages site failed" and the policy URL in
-      # native/app.json points at nothing.
+      # `enablement: true` asks GitHub to switch the Pages source to Actions.
+      # It works only where the workflow token is allowed to create a Pages
+      # site, which on this repository it is not:
+      #
+      #   Create Pages site failed. Error: Resource not accessible by integration
+      #
+      # Creating one needs admin, and GITHUB_TOKEN does not have it however many
+      # scopes the job declares. So this is best-effort — it succeeds where
+      # permissions allow and is skipped over where they do not, rather than
+      # taking the whole build down with it. The explicit check below is what
+      # actually reports the problem.
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        continue-on-error: true
         with:
           enablement: true
+
+      # Fail here, with something a person can act on, rather than letting the
+      # deploy job fail later with a bare "Get Pages site failed". The whole
+      # point of this workflow is that native/app.json's privacyPolicyUrl
+      # resolves to a real page, so a run that cannot publish must say so
+      # clearly instead of ending in a shrug.
+      - name: Confirm Pages is enabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${GITHUB_REPOSITORY}/pages" >/dev/null 2>&1; then
+            echo "Pages is enabled; the deploy job can publish."
+            exit 0
+          fi
+          echo "::error title=GitHub Pages is not enabled::Set Settings > Pages > Source to \"GitHub Actions\" on this repository, then re-run this workflow. It cannot be done from here: creating a Pages site requires admin, and the workflow token does not have it. Until this is done, privacyPolicyUrl in native/app.json points at a page that does not exist, and both stores fetch that URL during review."
+          exit 1
 
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
