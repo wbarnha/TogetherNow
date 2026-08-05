@@ -19,12 +19,24 @@
  * ships the two pages the stores actually ask for, plus a 404 that makes a
  * stale invite link explain itself.
  *
- * Usage: node scripts/build-pages.mjs [outDir]   (default: dist-pages)
+ * Runs under bun, not node: it imports the TypeScript helper above.
+ *
+ * Usage: bun scripts/build-pages.mjs [outDir]   (default: dist-pages)
  */
 
 import { mkdir, writeFile, readFile, readdir, copyFile, rm, access } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
+
+// Written in TypeScript, under test, and shared with nothing else — it exists
+// because doing this with a regular expression was wrong in three separate
+// ways. Imported from source, which is why this script runs under bun.
+import {
+  hasScriptElement,
+  stripScriptElements,
+  stripVoidElements,
+  unwrapElements,
+} from "../src/lib/html-strip.ts";
 
 const OUT = path.resolve(process.argv[2] ?? "dist-pages");
 const BUILD = path.resolve(".output");
@@ -58,27 +70,30 @@ async function render(route) {
  * replaced by whatever the router does with an unknown path. A policy is static
  * text, so nothing is lost by shipping it without JavaScript — and it loads
  * faster for the reviewer who has to read it.
+ *
+ * The element removals go through src/lib/html-strip.ts rather than a regular
+ * expression. A regex here missed `<SCRIPT>`, missed `</script >`, and kept
+ * everything after an unterminated `<script>` — each of which leaves a live
+ * script in the page this is supposed to strip clean. That module scans the
+ * markup instead, and its tests cover exactly those cases.
  */
 function standalone(html) {
-  let out = html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "")
-    .replace(/<link\b[^>]*rel="modulepreload"[^>]*>/g, "")
-    // The app manifest describes the installable app, not this page.
-    .replace(/<link\b[^>]*rel="manifest"[^>]*>/g, "")
-    // Server-side nonces are meaningless once the CSP that issued them is gone.
-    .replace(/ nonce="[^"]*"/g, "");
+  let out = stripScriptElements(html);
+  out = stripVoidElements(out, "link", (tag) => tag.includes("modulepreload"));
+  // The app manifest describes the installable app, not this page.
+  out = stripVoidElements(out, "link", (tag) => tag.includes('rel="manifest"'));
+  // Server-side nonces are meaningless once the CSP that issued them is gone.
+  out = out.replaceAll(/ nonce="[^"]*"/g, "");
 
   // Assets are one directory up, because this page is written to `privacy/`.
   out = out
-    .replace(/(?:src|href)="\/assets\/styles-[^"]*\.css"/g, 'href="../assets/styles.css"')
-    .replace(/(src|href)="\/(fonts\/[^"]*)"/g, '$1="../$2"')
-    .replace(/(src|href)="\/(favicon\.png|apple-touch-icon\.png)"/g, '$1="../$2"');
+    .replaceAll(/(?:src|href)="\/assets\/styles-[^"]*\.css"/g, 'href="../assets/styles.css"')
+    .replaceAll(/(src|href)="\/(fonts\/[^"]*)"/g, '$1="../$2"')
+    .replaceAll(/(src|href)="\/(favicon\.png|apple-touch-icon\.png)"/g, '$1="../$2"');
 
   // Links into the running app cannot work from a static page. Keep the words,
   // drop the link, rather than shipping something that 404s when clicked.
-  out = out.replace(/<a\b[^>]*href="\/[^"]*"[^>]*>([\s\S]*?)<\/a>/g, "$1");
-
-  return out;
+  return unwrapElements(out, "a", (tag) => /href="\/[^"]*"/.test(tag));
 }
 
 /** Every asset the standalone policy still points at. */
@@ -229,7 +244,7 @@ async function main() {
   if (leftover.length) {
     throw new Error(`Absolute references survived into the policy page: ${leftover.join(", ")}`);
   }
-  if (/<script\b/.test(policy)) throw new Error("Script tags survived into the policy page.");
+  if (hasScriptElement(policy)) throw new Error("Script tags survived into the policy page.");
   if (!policy.includes("../assets/styles.css")) {
     throw new Error("The policy page does not link the stylesheet; it would render unstyled.");
   }
