@@ -89,3 +89,9 @@ Capacitor Preferences, so the native widgets read it locally — no backend.
    </receiver>
    ```
 5. The `togethernow` intent filter is already added by `bun run native:config`.
+
+## Installing it on your own phone
+
+Neither store carries this app. To put a build on a device you own — an APK
+for Android, or an unsigned `.ipa` you re-sign yourself for iOS — see
+[SIDELOAD.md](SIDELOAD.md).

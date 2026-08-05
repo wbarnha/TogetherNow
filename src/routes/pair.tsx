@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStore } from "@/lib/app/store";
-import { applyShareCode, buildShareCode, parseShareCode } from "@/lib/app/share";
+import { applyShareCode, buildShareCode } from "@/lib/app/share";
+import { decodeShareCode } from "@/lib/app/share-decode";
 import { inviteLink, readInviteCode, sendInvite } from "@/lib/app/invite";
 import { InviteStatusBanner } from "@/components/app/InviteStatus";
 import { AcceptInvite } from "@/components/app/AcceptInvite";
@@ -39,6 +40,7 @@ function PairPage() {
   const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState("invite");
   const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const code = useMemo(() => (hydrated ? buildShareCode(state) : ""), [state, hydrated]);
 
@@ -84,9 +86,11 @@ function PairPage() {
     }
   };
 
-  const importCode = () => {
+  const importCode = async () => {
+    if (importing) return;
+    setImporting(true);
     try {
-      const payload = parseShareCode(incoming);
+      const payload = await decodeShareCode(incoming);
       const { state: next, summary } = applyShareCode(state, payload);
       setState(() => next);
       setIncoming("");
@@ -99,6 +103,8 @@ function PairPage() {
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "That code couldn't be read");
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -197,7 +203,11 @@ function PairPage() {
                 placeholder="TN1:…"
                 className="font-mono text-xs"
               />
-              <Button onClick={importCode} disabled={!incoming.trim()} className="w-full">
+              <Button
+                onClick={() => void importCode()}
+                disabled={!incoming.trim() || importing}
+                className="w-full"
+              >
                 Merge into my app
               </Button>
               <p className="text-xs text-muted-foreground">
