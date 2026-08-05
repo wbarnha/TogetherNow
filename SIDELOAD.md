@@ -9,8 +9,9 @@ iPhone to be signed by a certificate tied to an Apple Account, and CI cannot
 hold yours. So the iOS build ships **unsigned**, and you sign it on your own
 machine. Everything below is a variation on that.
 
-**Before you start on iOS, read [The bundle identifier problem](#the-bundle-identifier-problem).**
-It blocks every iOS route and you will hit it in the first five minutes.
+The bundle identifier used to block every iOS route here; it is
+[settled now](#the-bundle-identifier) and only needs your attention if you sign
+with an Apple Account other than the owner's.
 
 ---
 
@@ -30,15 +31,16 @@ Or, with the phone plugged in and USB debugging on: `adb install app-debug.apk`.
 
 **iOS**
 
-1. Change the bundle identifier first — see below, it is not optional.
-2. Either open `ios/App/App.xcodeproj` in Xcode, sign in with a free Apple
+1. Either open `ios/App/App.xcodeproj` in Xcode, sign in with a free Apple
    Account, pick your Personal Team, and press **Run** with the phone attached;
-3. Or download the `ios-unsigned-ipa` artifact and re-sign it with Sideloadly
+2. Or download the `ios-unsigned-ipa` artifact and re-sign it with Sideloadly
    or AltStore, which needs no Xcode.
-4. On the phone: trust the certificate **and** enable Developer Mode. They are
+3. On the phone: trust the certificate **and** enable Developer Mode. They are
    two different settings and you need both.
 
-Expect to redo step 2 or 3 every 7 days on a free account.
+Expect to redo step 1 or 2 every 7 days on a free account. If Xcode says the
+identifier "cannot be registered to your development team", see
+[The bundle identifier](#the-bundle-identifier).
 
 ---
 
@@ -107,35 +109,44 @@ adb install -d app.apk    # allow installing an older version code
 
 ## iOS
 
-### The bundle identifier problem
+### The bundle identifier
 
-Read this first; it blocks everything else.
-
-The project currently declares:
+The project declares:
 
 ```
-app.lovable.togethernow
+io.github.wbarnha.togethernow
 ```
 
-`app.lovable.*` is the scaffold's namespace, not yours. Bundle identifiers are
-globally unique across every Apple developer account, and this one is used by
-thousands of generated projects. Xcode will refuse it:
+This used to be the scaffold's `app.lovable.togethernow`, which Xcode refused
+outright, and it was the first thing that blocked every iOS route. It is
+settled now and needs no action from you — but one case still bites.
+
+**A bundle identifier can only be registered to one Apple team.** If you are
+signing with your own Apple Account rather than the owner's, Xcode will say:
 
 > Failed to register bundle identifier. The app identifier
-> 'app.lovable.togethernow' cannot be registered to your development team
+> 'io.github.wbarnha.togethernow' cannot be registered to your development team
 > because it is not available.
 
-**Change it to something nobody else has** before you build. Reverse-DNS on a
-domain you control is the convention — `com.yourname.togethernow` works fine
-for a personal build even if you own no domain, as long as it is unique.
+That is not a problem with the identifier; it is Apple saying somebody else
+already claimed it. Change it to something under a namespace you control —
+`com.yourname.togethernow` is fine for a personal build even if you own no
+domain, as long as it is unique.
 
-In `native/app.json`, set `appId`, and set `iosAppGroup` to `group.` plus that
-same value. Then `bun run native:config` writes it through to the Xcode
-project. `bun run store:check` fails while the placeholder is still there,
-which is deliberate.
+If you do change it, change it in `native/app.json` (`appId`, plus
+`iosAppGroup` as `group.` and the same value) and run `bun run native:config`
+rather than editing Xcode directly, since the project is regenerated. Two more
+files hardcode the App Group — `src/lib/app/widget.ts` and
+`native-widgets/ios/TogetherNowWidget.swift` — and `bun run store:check` fails
+if they drift, because the only symptom otherwise is a widget that renders
+nothing.
 
 The re-signing tools further down can override the identifier for you, so this
 matters most for the Xcode route.
+
+**Changing it also means a separate app.** iOS keys storage to the identifier,
+so a build under a different one installs alongside the old copy with an empty
+archive rather than updating it.
 
 ### Route 1 — Xcode, free Apple Account
 

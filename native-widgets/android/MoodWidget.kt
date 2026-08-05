@@ -1,8 +1,8 @@
 // MoodWidget.kt — Android home-screen widget (Jetpack Glance).
-// Place in android/app/src/main/java/app/lovable/togethernow/widget/ and register
+// Place in android/app/src/main/java/io/github/wbarnha/togethernow/widget/ and register
 // MoodWidgetReceiver in AndroidManifest.xml (see MOBILE.md).
 
-package app.lovable.togethernow.widget
+package io.github.wbarnha.togethernow.widget
 
 import android.content.Context
 import android.content.Intent

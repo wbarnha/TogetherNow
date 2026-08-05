@@ -57,6 +57,15 @@ async function exists(target) {
   }
 }
 
+/** Source of a committed file, or null if it is not there. */
+async function readIfPresent(target) {
+  try {
+    return await readFile(path.join(ROOT, target), "utf8");
+  } catch {
+    return null;
+  }
+}
+
 /* ------------------------------ identity -------------------------------- */
 
 // Apple will not register a bundle ID under someone else's reverse-DNS prefix,
@@ -68,17 +77,44 @@ checkBeforeRelease(
   `appId is still the scaffold placeholder "${CONFIG.appId}". Set it in native/app.json to a reverse-DNS ID on a domain you control, and update iosAppGroup to match.`,
 );
 
+// The intersection of both stores, which is narrower than either alone: Apple
+// rejects underscores (a bundle ID is a UTI) and Play rejects hyphens (the
+// package name is a Java package). A segment may not start with a digit.
 check(
   "Bundle/package ID is valid reverse-DNS",
-  /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/.test(CONFIG.appId),
-  `"${CONFIG.appId}" is not a valid identifier. Both stores require lowercase reverse-DNS with at least two segments and no hyphens.`,
+  /^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*)+$/.test(CONFIG.appId),
+  `"${CONFIG.appId}" is not a valid identifier. Lowercase, at least two segments, letters and digits only, and no segment may start with a digit — Apple rejects underscores and Play rejects hyphens.`,
 );
 
+// The App Group is the channel the home-screen widget reads the mood snapshot
+// through, and every failure of it is silent: the widget renders nothing and
+// nothing anywhere reports why.
+//
+// Comparing CONFIG.iosAppGroup to CONFIG.appId is necessary but proves almost
+// nothing, because both come from native/app.json and neither is what the
+// running code uses. The group is written out by hand in two more places that
+// nothing generates — the web side that WRITES the snapshot, and the Swift
+// widget that READS it. Those are the two that can drift, so those are the two
+// worth checking.
 check(
   "iOS App Group matches the bundle ID",
   CONFIG.iosAppGroup === `group.${CONFIG.appId}`,
-  `iosAppGroup is "${CONFIG.iosAppGroup}" but the bundle ID is "${CONFIG.appId}". The home-screen widget reads the mood snapshot through this group; a mismatch means it silently shows nothing.`,
+  `iosAppGroup is "${CONFIG.iosAppGroup}" but the bundle ID is "${CONFIG.appId}".`,
 );
+
+for (const [file, label] of [
+  ["src/lib/app/widget.ts", "the web app, which writes the snapshot"],
+  ["native-widgets/ios/TogetherNowWidget.swift", "the iOS widget, which reads it"],
+]) {
+  const source = await readIfPresent(file);
+  check(
+    `App Group in ${file}`,
+    source === null || source.includes(CONFIG.iosAppGroup),
+    source === null
+      ? `${file} is missing, so the App Group it declares cannot be checked.`
+      : `${file} does not mention "${CONFIG.iosAppGroup}". That file is ${label}, and it hardcodes the group rather than reading native/app.json — so if it still names the old one, the widget silently renders nothing.`,
+  );
+}
 
 check(
   "Marketing version is set",

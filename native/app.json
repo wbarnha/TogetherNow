@@ -5,18 +5,24 @@
     "scripts/apply-native-config.mjs writes the rest into the generated ios/ and",
     "android/ projects, which are regenerated rather than committed.",
     "",
-    "BEFORE YOUR FIRST SUBMISSION you must change appId to a reverse-DNS",
-    "identifier on a domain you control. `app.lovable.*` is the app builder's",
-    "namespace, not yours: Apple will not let you register a bundle ID under it,",
-    "and on Play the package name is permanent once published. Changing it later",
-    "means shipping a different app. scripts/verify-store-readiness.mjs fails on",
-    "the placeholder so a release cannot go out with it.",
+    "appId is PERMANENT. Play fixes the package name at the first upload and",
+    "Apple fixes the bundle ID at the first build sent to App Store Connect;",
+    "after that, changing it means shipping a different app that shares none of",
+    "the old one's installs or data. Do not edit it to match a rename.",
     "",
-    "iosAppGroup must stay in sync with appId — it is how the home-screen widget",
-    "reads the mood snapshot. See MOBILE.md."
+    "io.github.wbarnha is the reverse-DNS of wbarnha.github.io, which is the",
+    "namespace GitHub account ownership confers — the same basis Maven Central",
+    "and Flathub accept for publishers without their own domain. Neither store",
+    "verifies the domain, so nothing needs to be served there.",
+    "",
+    "iosAppGroup must stay in sync with appId. It is NOT enough to keep those",
+    "two fields agreeing: the group is also written into src/lib/app/widget.ts",
+    "and native-widgets/ios/TogetherNowWidget.swift, which nothing here",
+    "generates. scripts/verify-store-readiness.mjs reads those two files so a",
+    "drift fails the build rather than blanking the widget in silence."
   ],
 
-  "appId": "app.lovable.togethernow",
+  "appId": "io.github.wbarnha.togethernow",
   "appName": "Together Now",
   "displayName": "Together Now",
 
@@ -24,10 +30,10 @@
   "buildNumber": 1,
 
   "urlScheme": "togethernow",
-  "iosAppGroup": "group.app.lovable.togethernow",
+  "iosAppGroup": "group.io.github.wbarnha.togethernow",
 
   "privacyPolicyUrl": "https://togethernow.app/privacy",
-  "supportUrl": "https://togethernow.app/support",
+  "supportUrl": "https://github.com/wbarnha/TogetherNow/issues",
 
   "permissions": {
     "$comment": [

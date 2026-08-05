@@ -1,12 +1,12 @@
 //  TogetherNowWidget.swift
 //  Add to an iOS "Widget Extension" target in ios/App/App.xcodeproj.
 //  Both the app target and the widget target must join the App Group
-//  "group.app.lovable.togethernow" (Signing & Capabilities > App Groups).
+//  "group.io.github.wbarnha.togethernow" (Signing & Capabilities > App Groups).
 
 import WidgetKit
 import SwiftUI
 
-private let appGroup = "group.app.lovable.togethernow"
+private let appGroup = "group.io.github.wbarnha.togethernow"
 // Capacitor Preferences prefixes keys with "CapacitorStorage."
 private let snapshotKey = "CapacitorStorage.togethernow.widget.snapshot"
 

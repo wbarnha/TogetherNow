@@ -39,8 +39,12 @@ selected under Signing & Capabilities.
   `bun run native:config` to write the privacy manifest, permission strings,
   deep links, versions and release settings into the generated projects, then
   `bun run store:check`. See [STORE.md](./STORE.md).
-- The app ID is still `app.lovable.togethernow`; change it in `native/app.json`
-  before submitting to a store, along with `iosAppGroup`.
+- The app ID is `io.github.wbarnha.togethernow` and is permanent from the first
+  store upload. It lives in `native/app.json` alongside `iosAppGroup`, which
+  must stay `group.` plus that value — but note the group is also hardcoded in
+  `src/lib/app/widget.ts` and `native-widgets/ios/TogetherNowWidget.swift`,
+  which `bun run store:check` now verifies, because a drift there blanks the
+  widget silently.
 - Reminders use `@capacitor/local-notifications` and are scheduled on the
   device. They are silently skipped in a browser.
 - No backend, no accounts: all data lives in the device's local storage, and
@@ -57,7 +61,7 @@ The app writes a small JSON snapshot (both moods, streak, next plan) through
 Capacitor Preferences, so the native widgets read it locally — no backend.
 
 - Key: `togethernow.widget.snapshot`
-  - iOS: App Group `group.app.lovable.togethernow`, UserDefaults key
+  - iOS: App Group `group.io.github.wbarnha.togethernow`, UserDefaults key
     `CapacitorStorage.togethernow.widget.snapshot`
   - Android: SharedPreferences file `CapacitorStorage`, key
     `togethernow.widget.snapshot`
@@ -79,7 +83,7 @@ Capacitor Preferences, so the native widgets read it locally — no backend.
 2. Add Glance to `android/app/build.gradle`:
    `implementation "androidx.glance:glance-appwidget:1.1.1"`
 3. Copy `native-widgets/android/MoodWidget.kt` into
-   `android/app/src/main/java/app/lovable/togethernow/widget/`.
+   `android/app/src/main/java/io/github/wbarnha/togethernow/widget/`.
 4. Add a widget info XML (`res/xml/mood_widget_info.xml`) and register the receiver
    in `AndroidManifest.xml`:
    ```xml
