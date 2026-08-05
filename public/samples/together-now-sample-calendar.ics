@@ -1,0 +1,40 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Together Now//Sample calendar//EN
+CALSCALE:GREGORIAN
+BEGIN:VEVENT
+UID:sample-flight-out@togethernow.example
+SUMMARY:Flight to see Sam
+DTSTART;TZID=Europe/London:20260420T183000
+DTEND;TZID=Europe/London:20260420T213000
+LOCATION:London Heathrow
+DESCRIPTION:Terminal 5. Landing just after 9pm their time.
+END:VEVENT
+BEGIN:VEVENT
+UID:sample-dinner@togethernow.example
+SUMMARY:Dinner at Tartine
+DTSTART;TZID=America/New_York:20260421T190000
+DTEND;TZID=America/New_York:20260421T210000
+LOCATION:600 Guerrero St
+END:VEVENT
+BEGIN:VEVENT
+UID:sample-anniversary@togethernow.example
+SUMMARY:Our anniversary
+DTSTART;VALUE=DATE:20260505
+DTEND;VALUE=DATE:20260506
+END:VEVENT
+BEGIN:VEVENT
+UID:sample-floating@togethernow.example
+SUMMARY:Call with the visa office
+DTSTART:20260428T100000
+DTEND:20260428T103000
+DESCRIPTION:No timezone on this one - a floating time, read in your own zone.
+END:VEVENT
+BEGIN:VEVENT
+UID:sample-dst@togethernow.example
+SUMMARY:Flight home
+DTSTART;TZID=Europe/London:20261026T080000
+DTEND;TZID=Europe/London:20261026T110000
+DESCRIPTION:The week London is back on GMT but New York is still on summer time - the gap is 4 hours here\, not the usual 5.
+END:VEVENT
+END:VCALENDAR

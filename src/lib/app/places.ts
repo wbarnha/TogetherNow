@@ -1,3 +1,4 @@
+import { digestOf } from "./digest";
 import { safeHttpUrl } from "./safe-url";
 import type { Owner, Place, PlaceCategory } from "./types";
 
@@ -10,13 +11,30 @@ export type ParsedPlace = {
   lng?: number | undefined;
 };
 
-/** Stable id so re-importing the same list updates instead of duplicating. */
-export function placeId(p: ParsedPlace) {
-  const key =
+/** What identifies a place, independent of which id scheme hashes it. */
+function placeKey(p: ParsedPlace) {
+  return (
     p.url?.trim().toLowerCase() ||
     `${p.name.trim().toLowerCase()}|${p.address?.trim().toLowerCase() ?? ""}|${
       p.lat != null && p.lng != null ? `${p.lat.toFixed(4)},${p.lng.toFixed(4)}` : ""
-    }`;
+    }`
+  );
+}
+
+/**
+ * Stable id so re-importing the same list updates instead of duplicating.
+ *
+ * Places travel between devices in share codes, so a collision here does not
+ * just drop a saved idea — it merges two different real-world places into one
+ * on both phones.
+ */
+export function placeId(p: ParsedPlace) {
+  return `place-${digestOf(placeKey(p))}`;
+}
+
+/** The id this place would have had before the digest changed. */
+export function legacyPlaceId(p: ParsedPlace) {
+  const key = placeKey(p);
   let h = 0;
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0;
   return `place-${(h >>> 0).toString(36)}`;
@@ -161,6 +179,24 @@ function xmlDoc(text: string) {
 }
 
 /** Google My Maps / saved-list KML export. */
+/**
+ * Plain text out of a KML `<description>`, which is HTML in practice.
+ *
+ * Exported because it is the only part of the KML path that does not need a
+ * DOM, and it is the part worth testing: `[^<>]` here was `[^>]`, and with
+ * only `>` excluded every `<` in a description that never closes one rescans
+ * to the end of the string. That is quadratic — 256 KB of "<" took 46 seconds,
+ * on a file the importer will accept up to 32 MB of. Stopping at the next `<`
+ * makes the work linear and strips real tags identically, since a well-formed
+ * tag never contains `<`.
+ */
+export function stripMarkup(text: string): string {
+  return text
+    .replace(/<[^<>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function parsePlacesKml(text: string): ParsedPlace[] {
   const doc = xmlDoc(text);
   if (!doc) return [];
@@ -174,12 +210,7 @@ export function parsePlacesKml(text: string): ParsedPlace[] {
     out.push({
       name,
       address: pm.getElementsByTagName("address")[0]?.textContent?.trim() || undefined,
-      note: desc
-        ? desc
-            .replace(/<[^>]*>/g, " ")
-            .replace(/\s+/g, " ")
-            .trim()
-        : undefined,
+      note: desc ? stripMarkup(desc) || undefined : undefined,
       lat: Number.isFinite(lat) ? lat : undefined,
       lng: Number.isFinite(lng) ? lng : undefined,
     });

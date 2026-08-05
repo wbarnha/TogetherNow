@@ -66,11 +66,11 @@ jobs:
     name: CodeQL
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # CodeQL needs GitHub Advanced Security on a private repository. Rather
-    # than leaving a permanently red job, this is gated on a repository
-    # variable: set ENABLE_CODEQL=true (Settings → Secrets and variables →
-    # Actions → Variables) once the repo is public or Advanced Security is on.
-    if: vars.ENABLE_CODEQL == 'true'
+    # Ungated. This was behind an ENABLE_CODEQL repository variable while the
+    # repo was private, since code scanning there needs Advanced Security — but
+    # an unset variable meant the job skipped in silence, which reads exactly
+    # like a passing scan. The repo is public and scanning is free, so it runs.
+    # Should it go private again this fails loudly, which is the point.
     permissions:
       contents: read
       security-events: write
@@ -98,9 +98,7 @@ jobs:
     name: Dependency review
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Same gate as CodeQL: the dependency graph API needs Advanced Security on
-    # a private repository.
-    if: github.event_name == 'pull_request' && vars.ENABLE_CODEQL == 'true'
+    if: github.event_name == 'pull_request'
     permissions:
       contents: read
       # Only so the action can post its summary on the pull request.
@@ -110,7 +108,30 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+      # Dependency review needs the repository's dependency graph, which is a
+      # setting rather than anything in this repo. Probing for it first keeps
+      # the two failures apart: "nobody has turned it on" surfaces as a warning
+      # naming the exact setting, while a review that runs and finds something
+      # still fails the build. The old ENABLE_CODEQL gate collapsed both into a
+      # silent skip, which is indistinguishable from a clean scan.
+      - name: Check the dependency graph is available
+        id: graph
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          status=$(curl -sS -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/dependency-graph/compare/${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}")
+          if [ "$status" = "200" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Dependency review is not running::Enable the dependency graph at Settings → Advanced Security → Dependency graph. It is free on public repositories. Known advisories are still checked by the audit job; this adds per-PR review and licence policy. (API returned $status.)"
+          fi
+
+      - if: steps.graph.outputs.available == 'true'
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
         with:
           fail-on-severity: high
           comment-summary-in-pr: on-failure

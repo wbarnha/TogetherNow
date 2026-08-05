@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { SampleFileLink } from "@/components/app/SampleFileLink";
 import { importErrorMessage, readImportFile } from "@/lib/app/import-file";
 import { useStore } from "@/lib/app/store";
 import {
@@ -83,9 +84,10 @@ export function ImportMessagesDialog({
 
   const doImport = () => {
     let added = 0;
+    let skipped = 0;
     for (const s of staged) {
       const messages: ChatMessage[] = s.parsed.messages.map((m) => ({
-        id: messageId(s.parsed.source, m.at, m.text),
+        id: messageId(s.parsed.source, m.at, m.senderName, m.text),
         source: s.parsed.source,
         owner: (s.owners[m.senderName] ?? "them") as "me" | "them",
         senderName: m.senderName,
@@ -93,16 +95,24 @@ export function ImportMessagesDialog({
         at: m.at,
       }));
       const times = messages.map((m) => m.at);
-      added += importChat(messages, {
+      const result = importChat(messages, {
         source: s.parsed.source,
         label: s.fileName,
         firstAt: Math.min(...times),
         lastAt: Math.max(...times),
       });
+      added += result.added;
+      skipped += result.skipped;
     }
     if (added > 0) {
       toast.success(`${added} message${added === 1 ? "" : "s"} added`, {
-        description: "They're merged into your shared history, newest last.",
+        description: skipped
+          ? `${skipped} more didn't fit — your archive is at its limit.`
+          : "They're merged into your shared history, newest last.",
+      });
+    } else if (skipped > 0) {
+      toast.error("Your archive is full", {
+        description: `${skipped} message${skipped === 1 ? "" : "s"} couldn't be added. Remove an older import first.`,
       });
     } else {
       toast("Nothing new", { description: "Those messages were already in your archive." });
@@ -141,6 +151,10 @@ export function ImportMessagesDialog({
             {busy ? <Loader2 className="size-5 animate-spin" /> : <Upload className="size-5" />}
             Choose export files
           </Button>
+          <SampleFileLink
+            file="together-now-sample-messages.txt"
+            label="Download a sample transcript"
+          />
           <p className="text-xs text-muted-foreground">
             Pick one or several files — iMessage, Discord, and Instagram exports are detected
             automatically and merged into a single history. Everything stays on this device.
