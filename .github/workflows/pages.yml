@@ -1,0 +1,142 @@
+name: Publish the privacy policy to GitHub Pages
+
+# Both stores require a reachable privacy policy URL, and Apple additionally
+# requires a working support URL. `native/app.json` points the listings at
+# https://wbarnha.github.io/TogetherNow/privacy/ — this is what makes that
+# address exist. Without it the URL is a promise the repository does not keep,
+# which is the state the project was previously in: the old one pointed at a
+# domain nobody here owns, and the support URL at a path that never existed.
+#
+# The policy is rendered from src/routes/privacy.tsx rather than written twice.
+# See scripts/build-pages.mjs for why, and for why the app itself is not
+# published here.
+#
+# ONE-TIME SETUP: Settings > Pages > Source must be set to "GitHub Actions".
+# Until it is, the deploy job fails with "Get Pages site failed" and the policy
+# URL in native/app.json points at nothing — which is the exact failure this
+# workflow exists to prevent, so it fails loudly rather than publishing nowhere.
+
+on:
+  push:
+    branches: [main]
+    # The policy text, the config the pages read, and the builder itself.
+    paths:
+      - "src/routes/privacy.tsx"
+      - "native/app.json"
+      - "scripts/build-pages.mjs"
+      - ".github/workflows/pages.yml"
+      # The stylesheet is lifted out of the app build, so a change to the app's
+      # styling changes how the published policy looks.
+      - "src/**.css"
+      - "package.json"
+      - "bun.lock"
+  workflow_dispatch:
+
+# One deployment at a time, and never cancel one midway: an interrupted publish
+# can leave the live site on a half-written commit.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  BUN_VERSION: "1.3.11"
+
+jobs:
+  build:
+    name: Render the policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # `vite build` first: build-pages.mjs renders the policy by calling the
+      # built server worker, so there is nothing to render without it.
+      - name: Build the site
+        run: bun run pages:build
+
+      # build-pages.mjs already refuses to emit a page with absolute references
+      # or surviving scripts. This checks the other half — that what it wrote is
+      # actually reachable — because every failure here looks the same to a
+      # store reviewer: a policy page that does not render.
+      - name: Check every reference resolves
+        run: |
+          node --input-type=module -e '
+            import { readFile, readdir, stat } from "node:fs/promises";
+            import path from "node:path";
+
+            const ROOT = "dist-pages";
+            async function walk(dir) {
+              const out = [];
+              for (const entry of await readdir(dir, { withFileTypes: true })) {
+                const full = path.join(dir, entry.name);
+                if (entry.isDirectory()) out.push(...(await walk(full)));
+                else out.push(full);
+              }
+              return out;
+            }
+
+            const files = await walk(ROOT);
+            const pages = files.filter((f) => f.endsWith(".html"));
+            if (!pages.length) throw new Error("No pages were produced.");
+
+            const broken = [];
+            let checked = 0;
+            for (const page of pages) {
+              const html = await readFile(page, "utf8");
+              for (const [, ref] of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
+                if (/^(https?:|data:|mailto:|#)/.test(ref)) continue;
+                checked++;
+                let target = path.resolve(path.dirname(page), ref);
+                if (ref.endsWith("/")) target = path.join(target, "index.html");
+                await stat(target).catch(() => broken.push(`${page} -> ${ref}`));
+              }
+            }
+
+            const sheet = path.join(ROOT, "assets/styles.css");
+            const css = await readFile(sheet, "utf8");
+            for (const [, url] of css.matchAll(/url\(([^)]+)\)/g)) {
+              const ref = url.replace(/^["\x27]|["\x27]$/g, "");
+              if (/^(https?:|data:)/.test(ref)) continue;
+              checked++;
+              await stat(path.resolve(path.dirname(sheet), ref)).catch(() =>
+                broken.push(`${sheet} -> ${ref}`),
+              );
+            }
+
+            console.log(`${pages.length} page(s), ${checked} reference(s) checked`);
+            if (broken.length) {
+              console.error("::error::Broken references:\n" + broken.join("\n"));
+              process.exit(1);
+            }
+          '
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: dist-pages
+
+  deploy:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write # publish the site
+      id-token: write # the deployment is attested, not password-authenticated
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
