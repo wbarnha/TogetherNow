@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import { applySecurityHeaders, contentSecurityPolicy, createNonce, withNonce } from "../security";
 import { currentNonce } from "../nonce";
 
-const https = new URL("https://togethernow.app/pair");
+// `.test` is reserved for exactly this (RFC 6761), so the fixture cannot
+// quietly start naming somebody's real site the way the previous one did.
+const https = new URL("https://example.test/pair");
 
 function directives(csp: string): Map<string, string> {
   return new Map(

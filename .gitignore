@@ -39,3 +39,6 @@ dist-ssr
 
 # CI reports
 reports/
+
+# Static site published to GitHub Pages (scripts/build-pages.mjs)
+dist-pages

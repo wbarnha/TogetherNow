@@ -1,10 +1,27 @@
 import type { AppState } from "./types";
 import { buildShareCode } from "./share";
 
-const DEFAULT_ORIGIN = "https://togethernow.app";
+/**
+ * Where an invite link points when there is no window to ask.
+ *
+ * A base URL rather than a bare origin, because the published site is a project
+ * GitHub Pages site and lives under a path. It previously named togethernow.app,
+ * a domain this project does not own.
+ *
+ * This is a fallback that should never fire in practice: the only caller runs
+ * behind a `hydrated` guard, and the native shell has a window like any browser.
+ * It matters anyway, because whatever it names is compiled into the client
+ * bundle and would be handed to a partner if it ever did fire.
+ *
+ * The app itself is not served there, so `/pair` resolves to the site's 404
+ * page — which is written to recognise an invite link and say what to do with
+ * it, rather than leaving the recipient staring at "not found". See
+ * scripts/build-pages.mjs.
+ */
+const DEFAULT_INVITE_BASE = "https://wbarnha.github.io/TogetherNow";
 
 function currentOrigin(): string {
-  return typeof window === "undefined" ? DEFAULT_ORIGIN : window.location.origin;
+  return typeof window === "undefined" ? DEFAULT_INVITE_BASE : window.location.origin;
 }
 
 /**
