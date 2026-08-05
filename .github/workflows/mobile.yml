@@ -192,7 +192,26 @@ jobs:
   ios:
     name: iOS (unsigned .ipa for sideloading)
     needs: web
-    runs-on: macos-15
+    # macos-15 defaults to Xcode 16.4, whose newest iOS SDK is 18.5 — and since
+    # 28 April 2026 App Store Connect rejects any upload built against an SDK
+    # older than iOS 26. Sideloading has no such rule, so the job was producing
+    # a binary that installed fine on a phone and could never be submitted, and
+    # the failure would have surfaced at Apple rather than here.
+    #
+    # macos-26 (Tahoe) has been generally available since February 2026 and
+    # defaults to Xcode 26.x. Both images are arm64, so this is a toolchain
+    # change and not an architecture one.
+    #
+    # Pinned rather than `macos-latest`: the alias started moving to this image
+    # on 15 June 2026 and took weeks to roll out, and a floating label is a
+    # build that can change underneath you without a commit.
+    #
+    # macos-15 does also carry Xcode 26.x alongside its default, so an
+    # `xcode-select` would have worked too — but it tops out at 26.3 against
+    # this image's 26.6, and it leaves the build one image retirement away from
+    # silently falling back to Xcode 16. The step below asserts the outcome
+    # either way.
+    runs-on: macos-26
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -239,14 +258,54 @@ jobs:
             -destination 'generic/platform=iOS' \
             -derivedDataPath "$RUNNER_TEMP/ios-dd" \
             CODE_SIGNING_ALLOWED=NO build
+          # Where the bundle landed, so the next two steps agree on it.
+          echo "APP_BUNDLE=$RUNNER_TEMP/ios-dd/Build/Products/Release-iphoneos/App.app" \
+            >> "$GITHUB_ENV"
+
+      # The reason for the runner above, asserted rather than assumed. Xcode
+      # bakes the SDK it built against into the app's Info.plist, and that is
+      # the copy App Store Connect reads when it decides whether to accept an
+      # upload — so checking it here checks the same thing Apple will, rather
+      # than what the toolchain claims about itself. A runner image that rolls
+      # backwards, or a stray `xcode-select`, fails the build instead of
+      # producing an .ipa that is fine to sideload and impossible to submit.
+      - name: Verify the build used a current iOS SDK
+        env:
+          # Apple's floor since 28 April 2026. Raise it when Apple does.
+          MIN_IOS_SDK_MAJOR: "26"
+        run: |
+          set -euo pipefail
+          plist="$APP_BUNDLE/Info.plist"
+          test -f "$plist" || { echo "::error::No Info.plist at $plist"; exit 1; }
+          key() { /usr/libexec/PlistBuddy -c "Print :$1" "$plist" 2>/dev/null || true; }
+
+          sdk=$(key DTSDKName)          # iphoneos26.0
+          platform=$(key DTPlatformVersion)
+          xcode=$(key DTXcode)
+          echo "SDK ${sdk:-?} · platform ${platform:-?} · DTXcode ${xcode:-?}"
+          xcodebuild -version
+
+          major=${sdk#iphoneos}
+          major=${major%%.*}
+          case "$major" in
+            "" | *[!0-9]*)
+              echo "::error::Could not read an iOS SDK version from the built app (DTSDKName='$sdk')."
+              exit 1
+              ;;
+          esac
+
+          if [ "$major" -lt "$MIN_IOS_SDK_MAJOR" ]; then
+            echo "::error::Built against the iOS $major SDK, but App Store Connect requires iOS $MIN_IOS_SDK_MAJOR or newer. This binary would be rejected at upload. Check the runner image and which Xcode is selected."
+            exit 1
+          fi
+          echo "::notice::Built against the iOS $major SDK (${xcode:+DTXcode $xcode}), which App Store Connect accepts."
 
       - name: Package an unsigned .ipa
         run: |
-          APP="$RUNNER_TEMP/ios-dd/Build/Products/Release-iphoneos/App.app"
           # An xcodebuild that succeeds without emitting a bundle is exactly the
           # failure this job used to ship, so assert rather than assume.
-          test -d "$APP" || { echo "::error::xcodebuild produced no App.app at $APP"; exit 1; }
-          ./scripts/package-ipa.sh "$APP" "$RUNNER_TEMP/TogetherNow-unsigned.ipa"
+          test -d "$APP_BUNDLE" || { echo "::error::xcodebuild produced no App.app at $APP_BUNDLE"; exit 1; }
+          ./scripts/package-ipa.sh "$APP_BUNDLE" "$RUNNER_TEMP/TogetherNow-unsigned.ipa"
 
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
