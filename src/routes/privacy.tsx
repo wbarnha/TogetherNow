@@ -70,10 +70,10 @@ function PrivacyPage() {
 
           <Section title="What stays on your device">
             <p>
-              Your archive lives in your browser&apos;s local storage, or inside the app&apos;s own
-              private storage on iOS and Android. On Android it is explicitly excluded from Google
-              Drive backup and from device-to-device transfer, so a phone backup does not carry it
-              off the handset either.
+              Your archive lives in your browser&apos;s own on-device database, or inside the
+              app&apos;s private storage on iOS and Android. On Android it is explicitly excluded
+              from Google Drive backup and from device-to-device transfer, so a phone backup does
+              not carry it off the handset either.
             </p>
             <p>
               Deleting the app removes it. You can also erase everything at any time from{" "}

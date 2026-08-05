@@ -87,7 +87,11 @@ describe("chat export parsing", () => {
   });
 
   it("gives stable ids so re-imports dedupe", () => {
-    expect(messageId("imessage", 1000, "hey")).toBe(messageId("imessage", 1000, "hey"));
-    expect(messageId("imessage", 1000, "hey")).not.toBe(messageId("discord", 1000, "hey"));
+    expect(messageId("imessage", 1000, "Ada", "hey")).toBe(
+      messageId("imessage", 1000, "Ada", "hey"),
+    );
+    expect(messageId("imessage", 1000, "Ada", "hey")).not.toBe(
+      messageId("discord", 1000, "Ada", "hey"),
+    );
   });
 });
