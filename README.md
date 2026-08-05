@@ -17,8 +17,8 @@ exported as `.ics` / `.csv` files.
 ## Quick start (web)
 
 ```sh
-git clone https://github.com/wbarnha/close-forever.git
-cd close-forever
+git clone https://github.com/wbarnha/TogetherNow.git
+cd TogetherNow
 bun install
 bun run dev            # http://localhost:8080
 ```
@@ -104,12 +104,24 @@ fails on anything a store would reject.
 
 ## Prerequisites for native builds
 
-|         | iOS                                      | Android                                                |
-| ------- | ---------------------------------------- | ------------------------------------------------------ |
-| OS      | macOS 13+                                | macOS, Windows, or Linux                               |
-| Tooling | Xcode 15+ and Xcode Command Line Tools   | Android Studio (Hedgehog or newer)                     |
-| Extra   | CocoaPods (`sudo gem install cocoapods`) | JDK 21 + Android SDK 34 (installed via Android Studio) |
-| Device  | Free Apple ID for on-device runs         | USB debugging enabled, or an emulator                  |
+|         | iOS                                          | Android                                                |
+| ------- | -------------------------------------------- | ------------------------------------------------------ |
+| OS      | macOS 15.6+ (Xcode 26.4 and newer need 26.2) | macOS, Windows, or Linux                               |
+| Tooling | Xcode 26+ and Xcode Command Line Tools       | Android Studio (Hedgehog or newer)                     |
+| Extra   | Nothing else — see the note below            | JDK 21 + Android SDK 36 (installed via Android Studio) |
+| Device  | Free Apple ID for on-device runs             | USB debugging enabled, or an emulator                  |
+
+**Xcode 26 is not just a recommendation.** Since 28 April 2026 App Store
+Connect rejects any upload built against an iOS SDK older than 26, and Xcode 25
+and earlier cannot produce one. Sideloading has no such rule, so an older Xcode
+will happily build something that runs on your own phone and can never be
+submitted — [the mobile workflow](.github/workflows/mobile.yml) asserts the SDK
+version for exactly that reason.
+
+**No CocoaPods.** Capacitor 8 resolves plugins with Swift Package Manager, so
+`bunx cap add ios` generates `App.xcodeproj` and no `App.xcworkspace` or
+`Podfile` at all. (`cap add ios --packagemanager cocoapods` still opts into the
+old layout; nothing here does.)
 
 Both platforms also need `bun install` and one successful **`bun run build:mobile`**
 first. Use that rather than `bun run build`: a phone has no server to render
@@ -140,10 +152,17 @@ To build from the command line without signing (what CI does):
 
 ```sh
 cd ios/App
-xcodebuild -workspace App.xcworkspace -scheme App \
-  -sdk iphonesimulator -configuration Debug \
+xcodebuild -project App.xcodeproj -scheme App \
+  -configuration Release \
+  -destination 'generic/platform=iOS' \
+  -derivedDataPath build \
   CODE_SIGNING_ALLOWED=NO build
 ```
+
+`generic/platform=iOS`, not `iphonesimulator`: a simulator build produces a
+binary no phone can run, and it is not obvious from the output which one you
+got. To wrap the result into something a re-signing tool will install, see
+[SIDELOAD.md](./SIDELOAD.md) and `scripts/package-ipa.sh`.
 
 ---
 
