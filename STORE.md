@@ -18,26 +18,32 @@ where store configuration belongs.
 
 ## 1. Before anything else: pick your own identifier
 
-`native/app.json` still carries the scaffold's `app.lovable.togethernow`.
-**This has to change before your first upload, and it can never change after.**
+`native/app.json` carries **`io.github.wbarnha.togethernow`**, and it can never
+change after the first upload.
 
-- Apple will not let you register a bundle ID under a prefix you do not own.
-- On Play the package name is permanent from the first upload. Getting it wrong
+- On Play the package name is permanent from the first upload. Changing it
   means publishing a second, unrelated listing and abandoning the first.
-
-Edit `native/app.json`:
+- Apple fixes the bundle ID at the first build sent to App Store Connect.
 
 ```jsonc
 {
-  "appId": "com.yourdomain.togethernow",
-  "iosAppGroup": "group.com.yourdomain.togethernow", // must mirror appId
+  "appId": "io.github.wbarnha.togethernow",
+  "iosAppGroup": "group.io.github.wbarnha.togethernow", // must mirror appId
 }
 ```
 
-Then `bun run native:config && bun run store:check -- --release`.
+`io.github.wbarnha` is the reverse-DNS of `wbarnha.github.io` — the namespace
+GitHub account ownership confers, and the same basis Maven Central and Flathub
+accept from publishers without their own domain. Neither store verifies the
+domain, so nothing needs to be served there.
 
-`iosAppGroup` is how the home-screen widget reads the mood snapshot. If the two
-drift apart the widget silently renders nothing, so the check enforces the match.
+`iosAppGroup` is how the home-screen widget reads the mood snapshot, and every
+failure of it is silent. Keeping it equal to `group.` + `appId` is necessary
+but not sufficient: the group is written out by hand in `src/lib/app/widget.ts`
+(which writes the snapshot) and `native-widgets/ios/TogetherNowWidget.swift`
+(which reads it), neither of which is generated from this file.
+`bun run store:check` reads both, so a drift fails the build instead of
+producing a blank widget nobody can explain.
 
 While you are here, decide `privacyPolicyUrl` and `supportUrl`. The app serves
 its own policy at `/privacy`, so `https://<your-domain>/privacy` works as soon as

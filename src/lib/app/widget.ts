@@ -10,7 +10,7 @@ import { buildWidgetSnapshot } from "./mood";
  * so the WidgetKit / Glance widgets can read it without any server.
  */
 export const WIDGET_KEY = "togethernow.widget.snapshot";
-export const WIDGET_GROUP = "group.app.lovable.togethernow";
+export const WIDGET_GROUP = "group.io.github.wbarnha.togethernow";
 
 export async function publishWidgetSnapshot(state: AppState) {
   const snapshot = buildWidgetSnapshot(state);

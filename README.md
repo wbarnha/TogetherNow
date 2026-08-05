@@ -9,7 +9,7 @@ data with share codes (QR or text), and calendars/ideas can be imported and
 exported as `.ics` / `.csv` files.
 
 - Web app: TanStack Start + React + TypeScript + Tailwind CSS
-- Native shell: [Capacitor](https://capacitorjs.com) (app ID `app.lovable.togethernow`)
+- Native shell: [Capacitor](https://capacitorjs.com) (app ID `io.github.wbarnha.togethernow`)
 - Package manager: [Bun](https://bun.sh)
 
 ---
@@ -94,11 +94,15 @@ Store settings live in [`native/app.json`](./native/app.json). `ios/` and
 links, versions and release build settings into them, and `bun run store:check`
 fails on anything a store would reject.
 
-> **Before your first upload**, change `appId` in `native/app.json` to a
-> reverse-DNS identifier on a domain you control. `app.lovable.togethernow` is
-> the scaffold's namespace: Apple will not register it, and on Play the package
-> name is permanent from the first upload. `store:check -- --release` refuses
-> until you do.
+> The app ID is **`io.github.wbarnha.togethernow`**, and it is permanent — Play
+> fixes the package name at the first upload and Apple fixes the bundle ID at
+> the first build sent to App Store Connect. Changing it afterwards ships a
+> different app that shares none of the original's installs or data, so do not
+> edit it to match a rename.
+>
+> `io.github.wbarnha` is the reverse-DNS of `wbarnha.github.io`, the namespace
+> GitHub account ownership confers. Neither store verifies the domain, so
+> nothing has to be served there.
 
 ---
 
@@ -144,8 +148,9 @@ bunx cap open ios         # opens Xcode
 In Xcode:
 
 1. Select the **App** target → **Signing & Capabilities**.
-2. Pick your Apple ID under _Team_ and set a unique bundle identifier if
-   `app.lovable.togethernow` is taken.
+2. Pick your Apple ID under _Team_. The bundle identifier is already
+   `io.github.wbarnha.togethernow`; on a free Personal Team you may still need
+   your own, since an App ID can only be registered to one team.
 3. Choose your iPhone or a simulator in the toolbar and press **Run** (⌘R).
 
 To build from the command line without signing (what CI does):
